@@ -64,3 +64,5 @@ dataset/
 *.pt
 runs/
 check.py
+model/
+output/
