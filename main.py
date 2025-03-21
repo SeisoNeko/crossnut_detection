@@ -3,7 +3,7 @@ import os
 
 if __name__ == '__main__':
     model = ultralytics.YOLO('model/best.pt')
-    data_dir = 'dataset/v4/images/test'
+    data_dir = 'dataset/v4/images/test' # Path to the images wanted to inference
 
     output_dir = 'output'
     if not os.path.exists(output_dir):

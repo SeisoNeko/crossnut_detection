@@ -11,6 +11,8 @@ if __name__ == '__main__':
     train_label_path = os.path.join(dataset_path, 'labels/train')
     val_label_path = os.path.join(dataset_path, 'labels/val')
     test_label_path = os.path.join(dataset_path, 'labels/test')
+
+    #將COCO格式的標註轉換為YOLO格式，執行一次就可以block了
     convert_coco_to_yolo(json_path = train_label_path, output_path = train_label_path)
     convert_coco_to_yolo(json_path = val_label_path, output_path = val_label_path)
     convert_coco_to_yolo(json_path = test_label_path, output_path = test_label_path)
@@ -26,12 +28,14 @@ if __name__ == '__main__':
                 segmentation_labels[label_file] = f.readlines()
     image_files = [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.endswith('.jpg')]
 
+    '''
     # Display the first 5 images
     for image_file in image_files[:5]:  
         image = cv2.imread(image_file)
         cv2.imshow('Image', image)
         cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows()'
+    '''
 
     # Train the model
     results = model.train(data=os.path.join(dataset_path, 'roboflow_dataset.yaml'), epochs=100, imgsz=640, device='cuda')
