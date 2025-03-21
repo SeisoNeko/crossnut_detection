@@ -61,8 +61,6 @@ yarn-error.log
 #user specific
 data/
 dataset/
-*.pt
 runs/
 check.py
-model/
 output/
