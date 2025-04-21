@@ -64,3 +64,5 @@ dataset/
 runs/
 check.py
 output/
+*.pt
+*.zip
