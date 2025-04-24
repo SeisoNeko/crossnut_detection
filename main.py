@@ -165,11 +165,7 @@ def rgb_contour(img):
 
 if __name__ == '__main__':
     model = ultralytics.YOLO('model/cross_best.pt')
-    # data_dir = 'dataset/v4/images/test' # Path to the images wanted to inference
-    # data_dir = './pics/colored'
-    # data_dir = './pics/1140310-Photo'
     data_dir = './pics/data'
-    # data_dir = './pics'
     
 
     output_dir = f'./output/{data_dir.split("/")[-1]}'
@@ -182,10 +178,10 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(output_dir, 'masked'))
         
     for image_file in os.listdir(data_dir):
-        if image_file.endswith('.jpg'):
+        if image_file.endswith('.png'):
             image_name = os.path.splitext(image_file)[0]
             image_path = os.path.join(data_dir, image_file)
-            results = model(image_path, save_crop = True, project = output_dir, name='segmentation', exist_ok=True, retina_masks=True)
+            results = model(image_path, save_crop = True, project = output_dir, name='color', exist_ok=True, retina_masks=True)
            
             result = results[0]
             img = np.copy(result.orig_img)
