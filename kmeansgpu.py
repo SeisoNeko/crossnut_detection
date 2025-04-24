@@ -122,7 +122,7 @@ print(f"Number of non-transparent pixels: {np.sum(non_transparent_mask)}")
 
 
 # Visualize each cluster separately from the first k-means
-if 1:  # Set to True to visualize clusters
+if True:  # Set to True to visualize clusters
     # Convert clustered pixels back to NumPy
     clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))
 
@@ -139,42 +139,42 @@ if 1:  # Set to True to visualize clusters
     plt.axis('off')
     plt.title("First K-Means Result")
     plt.show()  # Add this line to display the plot
-for i in range(k):
-    # Create a blank RGBA image for the full dataset
-    cluster_image_flat = np.zeros((flat_alpha.size, 4), dtype=np.uint8)  # Initialize with zeros
+    for i in range(k):
+        # Create a blank RGBA image for the full dataset
+        cluster_image_flat = np.zeros((flat_alpha.size, 4), dtype=np.uint8)  # Initialize with zeros
 
-    # Get the mask for the current cluster
-    cluster_mask = (cluster_assignments == i)  # Boolean mask for the current cluster (non-transparent pixels only)
+        # Get the mask for the current cluster
+        cluster_mask = (cluster_assignments == i)  # Boolean mask for the current cluster (non-transparent pixels only)
 
-    # Create a combined mask
-    combined_mask = np.zeros(flat_alpha.size, dtype=bool)  # Initialize with all False
-    combined_mask[non_transparent_mask] = cp.asnumpy(cluster_mask)  # Set True only for non-transparent pixels in the current cluster
+        # Create a combined mask
+        combined_mask = np.zeros(flat_alpha.size, dtype=bool)  # Initialize with all False
+        combined_mask[non_transparent_mask] = cp.asnumpy(cluster_mask)  # Set True only for non-transparent pixels in the current cluster
 
-    # Get the centroid color for the current cluster
-    centroid_color = cp.asnumpy(centroids[:, i].T)
+        # Get the centroid color for the current cluster
+        centroid_color = cp.asnumpy(centroids[:, i].T)
 
-    # Assign the centroid color to the pixels in the current cluster
-    cluster_image_flat[combined_mask, :3] = centroid_color  # Assign RGB values
+        # Assign the centroid color to the pixels in the current cluster
+        cluster_image_flat[combined_mask, :3] = centroid_color  # Assign RGB values
 
-    # Set alpha to 255 for pixels in the current cluster, 0 for others
-    cluster_image_flat[combined_mask, 3] = 255  # Set alpha to 255 for the current cluster
-    cluster_image_flat[~combined_mask, 3] = 0  # Set alpha to 0 for other pixels
+        # Set alpha to 255 for pixels in the current cluster, 0 for others
+        cluster_image_flat[combined_mask, 3] = 255  # Set alpha to 255 for the current cluster
+        cluster_image_flat[~combined_mask, 3] = 0  # Set alpha to 0 for other pixels
 
-    # Reconstruct the full image with the cluster's colors
-    cluster_image = cluster_image_flat.reshape(original_height, original_width, 4)
+        # Reconstruct the full image with the cluster's colors
+        cluster_image = cluster_image_flat.reshape(original_height, original_width, 4)
 
-    # Save or display the cluster image
-    cluster_filename = f"cluster_{i}.png"
+        # Save or display the cluster image
+        cluster_filename = f"cluster_{i}.png"
 
-    # Save the image
-    Image.fromarray(cluster_image, 'RGBA').save(cluster_filename)
-    print(f"Saved cluster {i} as {cluster_filename}")
+        # Save the image
+        Image.fromarray(cluster_image, 'RGBA').save(cluster_filename)
+        print(f"Saved cluster {i} as {cluster_filename}")
 
-    # Optionally display the cluster image
-    plt.imshow(cluster_image)
-    plt.axis('off')
-    plt.title(f"Cluster {i}")
-    plt.show()
+        # Optionally display the cluster image
+        plt.imshow(cluster_image)
+        plt.axis('off')
+        plt.title(f"Cluster {i}")
+        plt.show()
 
 # Mask out the largest clusters in the original dataset
 print("Masking out the largest clusters...")
