@@ -64,3 +64,6 @@ dataset/
 runs/
 check.py
 output/
+pics/
+train/
+.env
