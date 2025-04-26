@@ -58,3 +58,7 @@ convert_coco_to_yolo(json_path='path/to/coco', output_path='path/to/output')
 ## 注意事項
 - 確保 `model/best.pt` 檔案存在於運行 `main.py` 之前
 - 資料集結構需符合 YOLOv8 要求格式
+
+## 引用
+本專案使用了以下公開repo
+- [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN/?tab=readme-ov-file)
