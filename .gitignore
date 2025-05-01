@@ -66,6 +66,5 @@ check.py
 output/
 pics/
 .env
-*.pt
 *.zip
 temp/
