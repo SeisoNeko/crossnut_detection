@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import os
 
-from utils import convert_coco_to_yolo
+from utils.coco2yolo import convert_coco_to_yolo
 import cv2
 
 if __name__ == '__main__':

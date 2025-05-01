@@ -68,3 +68,4 @@ pics/
 .env
 *.pt
 *.zip
+temp/
