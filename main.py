@@ -14,7 +14,7 @@ if __name__ == '__main__':
     number_detection_model = ultralytics.YOLO('model/number_detection_best.pt')
 
     # input_dir = './pics/1140430-gov2'   # input image directory, change as your wish
-    input_dir = './pics/colored_1'   # input image directory, change as your wish
+    input_dir = '../photos/labeled_cross_photos'   # input image directory, change as your wish
     output_dir = './output/final' # output image directory
 
     # Caculate inference time
@@ -26,24 +26,24 @@ if __name__ == '__main__':
             img_path = os.path.join(input_dir, image_file)
             img = cv2.imread(img_path)
 
-            cross_img = find_cross(img, img_name=image_file.split('.')[0], output_dir='./temp', model=cross_model)
+            cross_img = find_cross(img, img_name=image_file.split('.')[0], output_dir=output_dir, model=cross_model)
 
             # no cross found
             if cross_img is None:
                 continue
 
             # find label nums and positions
-            # cross_img_name = image_file.split('.')[0] + '_cross.png' # _crossline.png for cross_best_old.pt
-            # cross_img_path = os.path.join('./temp/crops', cross_img_name)
+            cross_img_name = image_file.split('.')[0] + '_cross.png' # _crossline.png for cross_best_old.pt
+            cross_img_path = os.path.join(output_dir, 'crops', cross_img_name)
 
-            temp = find_label(cross_img, img_name=image_file.split('.')[0], output_dir='./temp', model=find_label_model)
+            temp = find_label(cross_img, img_name=image_file.split('.')[0], output_dir=output_dir, model=find_label_model)
             label_count, label_positions, label_confs, label_imgs = temp
             
             # print(f"Image: {cross_img_name}, Number of labels: {label_count} \nPositions: \n{label_positions}")
 
             # find cross point
-            # cross_point = find_cross_point(cross_img_path)
-            # print(f"Cross point: {cross_point}")
+            cross_point = find_cross_point(cross_img_path, output_dir)
+            print(f"Cross point: {cross_point}")
 
             
             if label_count <= 2: # can't use interpolation (插值)
@@ -53,7 +53,7 @@ if __name__ == '__main__':
                 # TODO: check the illegal label
                 pass
             else: # calculate scale of labels
-                labels_dir = os.path.join('./temp/labels', image_file.split('.')[0])
+                labels_dir = os.path.join(output_dir, 'labels', image_file.split('.')[0])
                 poly = find_scale(label_imgs, label_positions, label_confs, labels_dir=labels_dir)
 
 
