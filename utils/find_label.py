@@ -1,49 +1,70 @@
 import os
 import cv2
+import numpy as np
+from cv2.typing import MatLike
 from ultralytics import YOLO
+from pathlib import Path
 
-
-def find_label(image_path, output_dir, model):
+def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> tuple[int, np.ndarray, np.ndarray, list[MatLike]]:
     """
     Find labels in images using a YOLO model and save the results.
 
     Args:
-        image_path (str): Path to the input image.
-        output_dir (str): Directory to save the output images and crops.
+        image (MatLike): Input image.
+        img_name (str): File name of the input image.
+        output_dir (str): Directory to save the output images.
         model: YOLO model for label detection.
 
     Returns:
         number_of_label: Number of labels detected in the image.
         labels_position: List of positions of the detected labels.
     """
+    if not os.path.exists(os.path.join(output_dir, 'labels')):
+        os.makedirs(os.path.join(output_dir, 'labels'))
+    if not os.path.exists(os.path.join(output_dir, f'labels/{img_name}')):
+        os.makedirs(os.path.join(output_dir, f'labels/{img_name}'))
+    
+    
     # Perform inference on the image
-    results = model(image_path, save = True, project = output_dir, name='label', exist_ok=True, retina_masks=True)
+    results = model.predict(image, project=output_dir, name='labels', exist_ok=True, retina_masks=True, conf=0.3)
+    
+    
+    result = results[0]  # one image only
+    result.save(os.path.join(output_dir, f"labels/{img_name}/labels.jpg"))  # Save the results
+    
+    xywh = result.boxes.xywh  # center-x, center-y, width, height
+    xywhn = result.boxes.xywhn  # normalized
+    xyxy = result.boxes.xyxy  # top-left-x, top-left-y, bottom-right-x, bottom-right-y
+    xyxyn = result.boxes.xyxyn  # normalized
+    names = [result.names[cls.item()] for cls in result.boxes.cls.int()]  # class name of each box
+    confs = result.boxes.conf.cpu().numpy().squeeze().astype(float) # confidence score of each box
 
-    # Access the results
-    for result in results:
-        xywh = result.boxes.xywh  # center-x, center-y, width, height
-        xywhn = result.boxes.xywhn  # normalized
-        xyxy = result.boxes.xyxy  # top-left-x, top-left-y, bottom-right-x, bottom-right-y
-        xyxyn = result.boxes.xyxyn  # normalized
-        names = [result.names[cls.item()] for cls in result.boxes.cls.int()]  # class name of each box
-        confs = result.boxes.conf  # confidence score of each box
+    number_of_labels = len(xyxy)
+    labels_position = xyxy.cpu().numpy().squeeze().astype(int)  # Convert to numpy array and squeeze
 
-        number_of_labels = len(xyxy)
+    labels = []  # Initialize an empty list to store the labels
+    if number_of_labels > 0:
+        labels = [ image[y1:y2, x1:x2] for x1, y1, x2, y2 in labels_position ]  # Crop the labels from the image
+        
+        # iterate each labels cordinates
+        for i, (x1, y1, x2, y2) in enumerate(labels_position):
+            cv2.imwrite(f"{output_dir}/labels/{img_name}/label_{i}.png", image[y1:y2, x1:x2])  # Save the cropped label image
+    
+    # Return the results
+    labels_center = np.array(list(map(lambda box: ((box[0]+box[2])//2, (box[1]+box[3])//2), labels_position)))
+    return number_of_labels, labels_center, confs, labels
+    
 
-        labels_position = xyxy.cpu().numpy().squeeze().astype(int)  # Convert to numpy array and squeeze
-
-    # Save the results
-
-    return number_of_labels, labels_position
     
     
 if __name__ == '__main__':
     input_dir = './temp/crops'  # Directory containing cropped images
-    output_dir = './temp/labels'  # Directory to save the output images and crops
-    model =  YOLO('./model/find_label_best.pt') # Path to the YOLO model for label detection
+    output_dir = './temp'  # Directory to save the output images and crops
+    model = YOLO('./model/find_label_best.pt') # Path to the YOLO model for label detection
 
     for image_file in os.listdir(input_dir):
         image_path = os.path.join(input_dir, image_file)  # Full path to the image
         print(f"Processing image: {image_file}")
-        nums, position= find_label(image_path=image_path, output_dir=output_dir, model=model)
-        print(f"Image: {image_file}, Number of labels: {nums}, Positions: {position}")
+        nums, position, confs, labels = find_label(image_path=image_path, output_dir=output_dir, model=model)
+        print(f"Image: {image_file}, Number of labels: {nums}\nPositions:\n{position}")
+        print(f"Confs:\n{confs}")

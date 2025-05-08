@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib as plt
 
 def rgb_contour(img):
     # img = cv2.imread('pic.png')
@@ -142,12 +143,12 @@ def rgb_contour(img):
             print("Gray center: ", x+w/2, y+h/2)
             gray_y = y+h/2
     
-    # if True:
-    #     poly = np.poly1d(np.polyfit(list_y, list_z, 2))
-    #     print(poly)
-    #     print("Estimated distance: ", poly(gray_y))
-    #     plt.plot(list_y, list_z, 'yo', list_y, poly(list_y), '--k')
-    #     plt.show()
+    if True:
+        poly = np.poly1d(np.polyfit(list_y, list_z, 2))
+        print(poly)
+        print("Estimated distance: ", poly(gray_y))
+        plt.plot(list_y, list_z, 'yo', list_y, poly(list_y), '--k')
+        plt.show()
 
     cv2.namedWindow("Color Tracking", cv2.WINDOW_NORMAL)
     cv2.imshow("Color Tracking", img)

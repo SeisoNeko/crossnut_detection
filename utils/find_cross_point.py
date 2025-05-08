@@ -29,7 +29,7 @@ def line_intersection(line1, line2):
 
 # ---
 
-def find_cross_point(image_path):
+def find_cross_point(image_path: str) -> tuple[int, int]:
     # 讀取圖片
     img = cv2.imread(image_path)
 
@@ -100,8 +100,8 @@ def find_cross_point(image_path):
     mean_y = np.mean(good_points_arr[:, 1])
 
     # 四捨五入（因為 pixel 座標要是整數）
-    final_x = int(round(mean_x))
-    final_y = int(round(mean_y))
+    final_x = int(np.round(mean_x))
+    final_y = int(np.round(mean_y))
 
     """ cv2.circle(img, (final_x, final_y), 2, (0, 255, 0), -1)
     # img[final_y, final_x] = (0, 255, 0)
@@ -116,4 +116,14 @@ def find_cross_point(image_path):
     cv2.waitKey(0)
     cv2.destroyAllWindows() """
 
+    print(final_x, final_y)
     return (final_x, final_y)
+
+
+if __name__ == "__main__":
+    import os
+    input_dir = './temp/crops'  # Directory containing cropped images
+    
+    for image_file in os.listdir(input_dir):
+        image_path = os.path.join(input_dir, image_file)
+        find_cross_point(image_path)
