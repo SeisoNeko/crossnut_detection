@@ -33,7 +33,7 @@ if __name__ == '__main__':
                 continue
 
             # find label nums and positions
-            # cross_img_name = image_file.split('.')[0] + '_crossline.png'
+            # cross_img_name = image_file.split('.')[0] + '_cross.png' # _crossline.png for cross_best_old.pt
             # cross_img_path = os.path.join('./temp/crops', cross_img_name)
 
             temp = find_label(cross_img, img_name=image_file.split('.')[0], output_dir='./temp', model=find_label_model)
