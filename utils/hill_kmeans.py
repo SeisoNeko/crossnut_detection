@@ -1,37 +1,12 @@
 import cupy as cp
 import numpy as np
+import cv2
 from PIL import Image
 from matplotlib import pyplot as plt
-import cv2
+from cv2.typing import MatLike
 
-# Load the image with transparency (RGBA)
-img = Image.open('img/crossline.jpg').convert('RGBA')
-inp = np.array(img)  # Pixel values in RGBA format
-alpha_channel = inp[:, :, 3]  # Extract the alpha channel
-rgb_values = inp[:, :, :3]  # Extract the RGB values
-
-# Flatten the image for clustering
-flat_rgb = rgb_values.reshape(-1, 3)  # Shape: (num_pixels, 3)
-flat_alpha = alpha_channel.flatten()  # Shape: (num_pixels,)
-
-# Mask out fully transparent pixels
-non_transparent_mask = flat_alpha > 0  # True for non-transparent pixels
-filtered_rgb = flat_rgb[non_transparent_mask]  # Only non-transparent pixels
-
-# Convert to CuPy array for clustering
-Y = cp.array(filtered_rgb.T)  # Shape: (3, num_non_transparent_pixels)
-m, N = Y.shape  # Number of parameters and pixels
-k = 4  # Number of clusters for the first k-means
-k2 = 3  # Number of clusters for the second k-means
-epsilon = 0.5  # Stopping condition
-batch_size = 1000  # Batch size for distance computation
-
-# Image dimensions
-original_width, original_height = img.size
-
-import numpy as np
-
-num_bins = 16  # Number of bins for histogram
+yellow_lower = np.array([20, 80, 50], np.uint8)
+yellow_upper = np.array([35, 255, 255], np.uint8)
 
 def hill_climbing_algorithm_flat(flat_rgb, num_bins):
     """
@@ -71,7 +46,7 @@ def hill_climbing_algorithm_flat(flat_rgb, num_bins):
     return peaks
 
 # Do iterations to find the centroids of the clusters
-def color_Iteration(init_centroids, k):
+def color_Iteration(init_centroids, k, Y):
     ite = 1
     while ite < k:
         max_sq_dist = -1
@@ -84,7 +59,7 @@ def color_Iteration(init_centroids, k):
     return init_centroids.copy()
 
 # Function to perform k-means clustering
-def error_iteration(centroids, k, batch_size=500):
+def error_iteration(centroids, k, Y, N, epsilon, batch_size=500):
     """
     Performs k-means clustering with batch processing to reduce memory usage.
 
@@ -126,37 +101,81 @@ def error_iteration(centroids, k, batch_size=500):
         print(f"Iteration {q}: Error = {error}")
     return centroids, cluster_assignments
 
-# Step 1. Run the hill-climbing algorithm on filtered_rgb
-print("Running hill-climbing algorithm...")
-peaks = hill_climbing_algorithm_flat(filtered_rgb, num_bins=16)
-print(f"Number of peaks found: {len(peaks)}")
-print(f"Peaks: {peaks}")
 
-k = len(peaks)  # Number of clusters based on peaks
+def hill_kmeans(img: MatLike) -> MatLike:
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    yellow_mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
+    # cover the yellow area with black and set to transparent
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)  # Convert to BGRA format for transparency
+    img[yellow_mask > 0] = (0, 0, 0, 0)  # Set yellow pixels to transparent  
+    
+    img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)  # Convert to RGB format for processing
+    
+    inp = np.array(img)  # Pixel values in RGBA format
+    alpha_channel = inp[:, :, 3]  # Extract the alpha channel
+    rgb_values = inp[:, :, :3]  # Extract the RGB values
 
-# Step 2. Use K-Means
-print("Running K-means...")
+    # Flatten the image for clustering
+    flat_rgb = rgb_values.reshape(-1, 3)  # Shape: (num_pixels, 3)
+    flat_alpha = alpha_channel.flatten()  # Shape: (num_pixels,)
 
-init_centroids = cp.zeros((3, k))
-init_centroids[:, 0] = Y[:, cp.random.randint(0, N)]  # First centroid is random
+    # Mask out fully transparent pixels
+    non_transparent_mask = flat_alpha > 0  # True for non-transparent pixels
+    filtered_rgb = flat_rgb[non_transparent_mask]  # Only non-transparent pixels
 
-centroids = color_Iteration(init_centroids, k)  # Initialize centroids using farthest point method
+    # Convert to CuPy array for clustering
+    Y = cp.array(filtered_rgb.T)  # Shape: (3, num_non_transparent_pixels)
+    m, N = Y.shape  # Number of parameters and pixels
+    k = 4  # Number of clusters for the first k-means
+    k2 = 3  # Number of clusters for the second k-means
+    epsilon = 5  # Stopping condition
+    batch_size = 1000  # Batch size for distance computation
 
-# Perform k-means clustering
-centroids, cluster_assignments = error_iteration(centroids, k, batch_size)
+    # Image dimensions
+    original_height, original_width = img.shape[:2]
 
-# Reconstruct the full image with clustered colors
-clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))  # Convert back to NumPy
-reconstructed_rgb = np.zeros((flat_rgb.shape[0], 3), dtype=np.uint8)  # Initialize with zeros
-reconstructed_rgb[non_transparent_mask] = clustered_flat_rgb  # Map clustered colors to non-transparent pixels
+    num_bins = 16  # Number of bins for histogram
+    
+    
+    # Step 1. Run the hill-climbing algorithm on filtered_rgb
+    print("Running hill-climbing algorithm...")
+    peaks = hill_climbing_algorithm_flat(filtered_rgb, num_bins)
+    print(f"Number of peaks found: {len(peaks)}")
+    print(f"Peaks: {peaks}")
 
-# Combine with the original alpha channel
-reconstructed_image = np.zeros((flat_alpha.size, 4), dtype=np.uint8)  # RGBA
-reconstructed_image[:, :3] = reconstructed_rgb  # Add RGB values
-reconstructed_image[:, 3] = flat_alpha  # Add the original alpha channel
+    k = len(peaks)  # Number of clusters based on peaks
 
-# Reshape back to the original image dimensions
-reconstructed_image = reconstructed_image.reshape(original_height, original_width, 4)
+    # Step 2. Use K-Means
+    print("Running K-means...")
 
-# Save the reconstructed image
-Image.fromarray(reconstructed_image, 'RGBA').save('clustered_image_with_alpha.png')
+    init_centroids = cp.zeros((3, k))
+    init_centroids[:, 0] = Y[:, cp.random.randint(0, N)]  # First centroid is random
+
+    centroids = color_Iteration(init_centroids, k, Y)  # Initialize centroids using farthest point method
+
+    # Perform k-means clustering
+    centroids, cluster_assignments = error_iteration(centroids, k, Y, N, epsilon, batch_size)
+
+    # Reconstruct the full image with clustered colors
+    clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))  # Convert back to NumPy
+    reconstructed_rgb = np.zeros((flat_rgb.shape[0], 3), dtype=np.uint8)  # Initialize with zeros
+    reconstructed_rgb[non_transparent_mask] = clustered_flat_rgb  # Map clustered colors to non-transparent pixels
+
+
+    # Combine with the original alpha channel
+    reconstructed_image = np.zeros((flat_alpha.size, 3), dtype=np.uint8)  # RGBA
+    reconstructed_image[:, :3] = reconstructed_rgb  # Add RGB values
+    # reconstructed_image[:, 3] = flat_alpha  # Add the original alpha channel
+
+    # Reshape back to the original image dimensions
+    reconstructed_image = reconstructed_image.reshape(original_height, original_width, 3)
+
+    return cv2.cvtColor(reconstructed_image, cv2.COLOR_RGB2BGR)
+
+if __name__ == "__main__":
+    # Load the image with transparency (RGBA)
+    img = cv2.imread('img/crossline.jpg', cv2.IMREAD_UNCHANGED)
+    
+    ret = hill_kmeans(img)
+
+    cv2.imwrite("clustered_image_with_alpha.png", ret)

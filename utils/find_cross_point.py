@@ -133,7 +133,6 @@ def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
     output_path = os.path.splitext(output_path)[0] + ".png"
     cv2.imwrite(output_path, img)
 
-    print(final_x, final_y)
     return (final_x, final_y)
 
 

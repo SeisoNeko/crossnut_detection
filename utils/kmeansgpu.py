@@ -190,6 +190,6 @@ if __name__ == '__main__':
         image_path = os.path.join(input_dir, image_file)  # Full path to the image
         print(f"Processing image: {image_file}")
         
-        img = cv2.imread(image_path)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
         means = kmeans_gpu(img)
         cv2.imwrite(image_path.replace(".png", "_kmeans.png"), means)

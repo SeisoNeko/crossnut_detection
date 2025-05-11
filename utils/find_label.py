@@ -3,7 +3,11 @@ import cv2
 import numpy as np
 from cv2.typing import MatLike
 from ultralytics import YOLO
-from pathlib import Path
+if __name__ == "__main__":
+    from hill_kmeans import hill_kmeans
+else:
+    from .hill_kmeans import hill_kmeans
+
 
 def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> tuple[int, np.ndarray, np.ndarray, list[MatLike]]:
     """
@@ -23,10 +27,15 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
         os.makedirs(os.path.join(output_dir, 'labels'))
     if not os.path.exists(os.path.join(output_dir, f'labels/{img_name}')):
         os.makedirs(os.path.join(output_dir, f'labels/{img_name}'))
-    
+    if not os.path.exists(os.path.join(output_dir, 'kmeans')):
+        os.makedirs(os.path.join(output_dir, 'kmeans'))    
+        
+    # image_kmeans = hill_kmeans(image)
+    # cv2.imwrite(f"{output_dir}/kmeans/{img_name}_kmeans.png", image_kmeans)  # Save the k-means image
     
     # Perform inference on the image
-    results = model.predict(image, project=output_dir, name='labels', exist_ok=True, retina_masks=True, conf=0.3)
+    results = model.predict(cv2.cvtColor(image, cv2.COLOR_BGRA2BGR), project=output_dir, name='labels', exist_ok=True, retina_masks=True, verbose=False, conf=0.3)
+    # results = model.predict(image_kmeans, project=output_dir, name='labels', exist_ok=True, retina_masks=True, verbose=False, conf=0.3)
     
     
     result = results[0]  # one image only

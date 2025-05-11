@@ -59,12 +59,13 @@ npm-debug.log
 yarn-error.log
 
 #user specific
+.env
 data/
 dataset/
 runs/
-check.py
 output/
 pics/
-.env
-*.zip
 temp/
+check.py
+test.py
+*.zip

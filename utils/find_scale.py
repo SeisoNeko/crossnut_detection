@@ -1,82 +1,125 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 from cv2.typing import MatLike
+if __name__ == "__main__":
+    from kmeansgpu import kmeans_gpu
+else:
+    from .kmeansgpu import kmeans_gpu
+
+WHITE_HEIGHT = 22
+RED_HEIGHT = 42
+BLUE_HEIGHT = 62
+GREEN_HEIGHT = 82
+BLACK_HEIGHT = 102
+
+def is_sorted(l: list[int]) -> bool:
+    """
+    Check if a list is sorted in ascending order.
+    
+    Args:
+        l (list): The list to check.
+        
+    Returns:
+        bool: True if the list is sorted, False otherwise.
+    """
+    return all(l[i] <= l[i + 1] for i in range(len(l) - 1))
 
 
 def find_scale(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> np.poly1d:
+    labels_height = []
 
-    # Set range for red color 
-    red_lower1 = np.array([0,   88,  146], dtype=np.uint8)
-    red_upper1 = np.array([10,  105, 255], dtype=np.uint8)
-    red_lower2 = np.array([167, 73,  126], dtype=np.uint8)
-    red_upper2 = np.array([179, 120, 255], dtype=np.uint8)
-
-    #green color
-    green_lower = np.array([50, 11, 158], dtype=np.uint8)
-    green_upper = np.array([93, 76, 255], dtype=np.uint8)
-
-    #blue color
-    blue_lower = np.array([96,  36,  0  ], dtype=np.uint8)
-    blue_upper = np.array([123, 137, 255], dtype=np.uint8)
-        
     # K-means clustering
     mean_labels = list(map(kmeans_gpu, labels))
     for i, img in enumerate(mean_labels):
         cv2.imwrite(f"{labels_dir}/label_{i}_kmeans.png", img)
+
+        # cv2.imshow(f"label_{i}", img)
+        # cv2.moveWindow(f"label_{i}", 750, 700)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows() 
         
+        # 分離通道
+        bgr = img[:, :, :3]     # (H, W, 3)
+        alpha = img[:, :, 3]    # (H, W)
 
+        # 建立非透明遮罩（alpha > 0）
+        mask = alpha > 0        # bool mask
 
-        # Convert to HLS color space
-        hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+        # 將 BGR reshape 成 (N, 3)，mask 成 (N,)
+        bgr_flat = bgr.reshape(-1, 3)
+        mask_flat = mask.flatten()
 
-        # Create masks for each color
-        red_mask = cv2.inRange(hls, red_lower1, red_upper1) | cv2.inRange(hls, red_lower2, red_upper2)
-        green_mask = cv2.inRange(hls, green_lower, green_upper)
-        blue_mask = cv2.inRange(hls, blue_lower, blue_upper)
+        # 取出非透明像素
+        valid_pixels = bgr_flat[mask_flat]
+        bgr = valid_pixels.mean(axis=0)
+                
+        hls = cv2.cvtColor(valid_pixels[np.newaxis, :, :], cv2.COLOR_BGR2HLS)[0].mean(axis=0)
+        h, l, s = hls
         
-        cv2.imshow(f"label_{i}", img)
-        cv2.imshow(f"red", red_mask)
-        cv2.imshow(f"green", green_mask)
-        cv2.imshow(f"blue", blue_mask)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows() 
-        
-        rgb_mask = red_mask | green_mask | blue_mask
-
-        # 黑白分析
-        non_rgb_mask = cv2.bitwise_not(rgb_mask)
-        hls_filtered = hls[non_rgb_mask > 0]
-        if len(hls_filtered) > 0:
-            h, l, s = hls_filtered[:,0], hls_filtered[:,1], hls_filtered[:,2]
-            black_pixels = np.sum((l < 50) & (s > 5))
-            white_pixels = np.sum((l > 120) & (s < 10))
+            
+        # if max(bgr)-min(bgr) < 35: #black/white
+        #     if l < 80:
+        #         print("black")
+        #     else:
+        #         print("white")
+        if s < 70 or l > 150 or max(bgr)-min(bgr) < 20: # black/white
+            if l <= 72:
+                labels_height.append(BLACK_HEIGHT)
+                # print("black")
+            else:
+                labels_height.append(WHITE_HEIGHT)
+                # print("white")
+        elif h < 15 or h > 170:
+            labels_height.append(RED_HEIGHT)
+            # print("red")
+        elif h > 60 and h < 95:
+            labels_height.append(GREEN_HEIGHT)
+            # print("green")
+        elif h > 95 and h < 130:
+            labels_height.append(BLUE_HEIGHT)
+            # print("blue")
         else:
-            black_pixels = 0
-            white_pixels = 0
+            labels_height.append(0)
+            # print(f"--unknown--{labels_dir}")
 
-        counts = {
-            "red":   cv2.countNonZero(red_mask),
-            "green": cv2.countNonZero(green_mask),
-            "blue":  cv2.countNonZero(blue_mask),
-            "black": black_pixels,
-            "white": white_pixels
-        }
+    # print()
 
-        print(max(counts, key=counts.get))
 
-    print()
-    # poly = np.poly1d(np.polyfit(list_y, list_z, 2))
-    # print(poly)
-    # print("Estimated distance: ", poly(gray_y))
-    # plt.plot(list_y, list_z, 'yo', list_y, poly(list_y), '--k')
-    # plt.show()
+    
+    # remove duplicate blacks
+    if labels_height.count("black") > 1:
+        indexs = [i for i, color in enumerate(labels_height) if color == "black"]
+        max_index = max(indexs, key=lambda x: confs[x])
+        for i in indexs:
+            if i != max_index:
+                labels_height.pop(i)
+                confs.pop(i)
+                positions = np.delete(positions, i, axis=0)
+
+                
+    # # check if the order of y and color is matched
+    # datas.sort(key=lambda x: x[1])  # Sort by y coordinate
+    # if not is_sorted([d[0] for d in datas]):
+    #     print("Error: y coordinates are not sorted.")
+    #     return None
+    
+    
+    positions_y = positions.transpose()[1]
+    
+    poly = np.poly1d(np.polyfit(positions_y, labels_height, 2))
+    
+    print(poly)
+    # plt.plot(positions_y, labels_height, 'yo', positions_y, poly(positions_y), '--k')
+    
+    return poly
+
 
 
 
 if __name__ == "__main__":
-    from kmeansgpu import kmeans_gpu
     import os
-    input_dir = './temp/labels/PXL_20250415_094322101'  # Directory containing cropped images
+    input_dir = './output/final/labels/P_20250430_143423'  # Directory containing cropped images
 
     labels = []
     for image_file in os.listdir(input_dir):
@@ -85,11 +128,11 @@ if __name__ == "__main__":
         labels.append(cv2.imread(image_path))
     
     
-    positions = np.array([[1568,1024,1773,1127],
-                          [1642,3378,1793,3436],
-                          [1629,2934,1790,2995],
-                          [1591,1793,1784,1878],
-                          [1607,2409,1779,2480]])
+    positions = np.array([[1568,1127],
+                          [1642,3436],
+                          [1629,2995],
+                          [1591,1878],
+                          [1607,2480]])
     confs = np.array([0.88742, 0.86251, 0.8286, 0.81845, 0.77712])
     output_dir = "output_directory"
  
