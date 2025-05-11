@@ -68,3 +68,4 @@ pics/
 .env
 *.zip
 temp/
+num_detection.py

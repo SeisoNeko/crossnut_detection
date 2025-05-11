@@ -5,7 +5,7 @@ from cv2.typing import MatLike
 from ultralytics import YOLO
 from pathlib import Path
 
-def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> tuple[int, np.ndarray, np.ndarray, list[MatLike]]:
+def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> tuple[int, np.ndarray, np.ndarray, list[MatLike], MatLike]:
     """
     Find labels in images using a YOLO model and save the results.
 
@@ -26,11 +26,11 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
     
     
     # Perform inference on the image
-    results = model.predict(image, project=output_dir, name='labels', exist_ok=True, retina_masks=True, conf=0.3)
+    results = model.predict(image, project=output_dir, name='labels', exist_ok=True, retina_masks=True, conf=0.3, verbose=False)
     
     
     result = results[0]  # one image only
-    result.save(os.path.join(output_dir, f"labels/{img_name}/labels.jpg"))  # Save the results
+    result.save(os.path.join(output_dir, f"labels/{img_name}/labels.png"))  # Save the results
     
     xywh = result.boxes.xywh  # center-x, center-y, width, height
     xywhn = result.boxes.xywhn  # normalized
@@ -52,7 +52,7 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
     
     # Return the results
     labels_center = np.array(list(map(lambda box: ((box[0]+box[2])//2, (box[1]+box[3])//2), labels_position)))
-    return number_of_labels, labels_center, confs, labels
+    return number_of_labels, labels_center, confs, labels, result
     
 
     
