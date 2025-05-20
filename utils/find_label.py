@@ -39,7 +39,7 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
     
     
     result = results[0]  # one image only
-    result.save(os.path.join(output_dir, f"labels/{img_name}/labels.jpg"))  # Save the results
+    result.save(os.path.join(output_dir, f"labels/{img_name}/labels.png"))  # Save the results
     
     xywh = result.boxes.xywh  # center-x, center-y, width, height
     xywhn = result.boxes.xywhn  # normalized

@@ -69,3 +69,4 @@ temp/
 check.py
 test.py
 *.zip
+num_detection.py

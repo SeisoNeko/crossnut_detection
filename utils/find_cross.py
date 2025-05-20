@@ -28,7 +28,7 @@ def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> M
           
 
     # results = model.predict(image_path, save_crop = True, project = output_dir, name='cross', exist_ok=True, retina_masks=True)
-    results = model.predict(image, project = output_dir, name='cross', exist_ok=True, retina_masks=True)
+    results = model.predict(image, project = output_dir, name='cross', exist_ok=True, retina_masks=True, verbose=False)
     result = results[0] # one image only
 
     # can't find any cross in the image
