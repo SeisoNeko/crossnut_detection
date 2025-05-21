@@ -27,13 +27,13 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
         os.makedirs(os.path.join(output_dir, 'labels'))
     if not os.path.exists(os.path.join(output_dir, f'labels/{img_name}')):
         os.makedirs(os.path.join(output_dir, f'labels/{img_name}'))
-    if not os.path.exists(os.path.join(output_dir, 'kmeans')):
-        os.makedirs(os.path.join(output_dir, 'kmeans'))    
         
+    # if not os.path.exists(os.path.join(output_dir, 'kmeans')):
+    #     os.makedirs(os.path.join(output_dir, 'kmeans'))    
     # image_kmeans = hill_kmeans(image)
     # cv2.imwrite(f"{output_dir}/kmeans/{img_name}_kmeans.png", image_kmeans)  # Save the k-means image
     
-    # Perform inference on the image
+    ### Perform inference on the image
     results = model.predict(cv2.cvtColor(image, cv2.COLOR_BGRA2BGR), project=output_dir, name='labels', exist_ok=True, retina_masks=True, verbose=False, conf=0.3)
     # results = model.predict(image_kmeans, project=output_dir, name='labels', exist_ok=True, retina_masks=True, verbose=False, conf=0.3)
     
@@ -53,15 +53,20 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
 
     labels = []  # Initialize an empty list to store the labels
     if number_of_labels > 0:
-        labels = [ image[y1:y2, x1:x2] for x1, y1, x2, y2 in labels_position ]  # Crop the labels from the image
-        
+        labels = []
+        labels_center = []
         # iterate each labels cordinates
         for i, (x1, y1, x2, y2) in enumerate(labels_position):
-            cv2.imwrite(f"{output_dir}/labels/{img_name}/label_{i}.png", image[y1:y2, x1:x2])  # Save the cropped label image
+            crop = image[y1:y2, x1:x2]
+            labels.append(crop)  # Crop the labels from the image
+            labels_center.append(((x1+x2)//2, (y1+y2)//2))
+            cv2.imwrite(f"{output_dir}/labels/{img_name}/label_{i}.png", crop)  # Save the cropped label image
+            
+        # Return the results
+        labels_center = np.array(labels_center)
+        return number_of_labels, labels_center, confs, labels
     
-    # Return the results
-    labels_center = np.array(list(map(lambda box: ((box[0]+box[2])//2, (box[1]+box[3])//2), labels_position)))
-    return number_of_labels, labels_center, confs, labels
+    return 0, np.array([]), np.array([]), []  # Return empty values if no labels found
     
 
     

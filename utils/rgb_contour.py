@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 def rgb_contour(img):
     # img = cv2.imread('pic.png')

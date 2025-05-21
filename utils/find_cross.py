@@ -39,7 +39,7 @@ def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> M
     img = np.copy(result.orig_img)
     final_mask = np.zeros(img.shape[:2], dtype=np.uint8)
     # iterate each object contour
-    for ci,c in enumerate(result):
+    for c in result:
         label = c.names[c.boxes.cls.tolist().pop()]
         b_mask = np.zeros(img.shape[:2], dtype=np.uint8)
 
@@ -50,20 +50,20 @@ def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> M
 
     # Apply mask to image & Set alpha channel for transparency
     isolated = cv2.bitwise_and(img, img, mask=final_mask)
-    isolated_rgba = cv2.cvtColor(isolated, cv2.COLOR_BGR2BGRA)
-    isolated_rgba[:, :, 3] = final_mask
+    isolated_gbra = cv2.cvtColor(isolated, cv2.COLOR_BGR2BGRA)
+    isolated_gbra[:, :, 3] = final_mask
     
     # mask (transparent background)
-    cv2.imwrite(f"{output_dir}/masked/{img_name}_masked.png", isolated_rgba)
+    cv2.imwrite(f"{output_dir}/masked/{img_name}_masked.png", isolated_gbra)
     
     # crop the image
     x1, y1, x2, y2 = result[0].boxes.xyxy.cpu().numpy().squeeze().astype(np.int32)
 
     iso_crop = isolated[y1:y2, x1:x2]
-    iso_crop_rgba = isolated_rgba[y1:y2, x1:x2]
-    cv2.imwrite(f"{output_dir}/crops/{img_name}_{label}.png", iso_crop_rgba)
+    iso_crop_bgra = isolated_gbra[y1:y2, x1:x2]
+    cv2.imwrite(f"{output_dir}/crops/{img_name}_{label}.png", iso_crop_bgra)
     
-    return iso_crop
+    return iso_crop_bgra
 
 
 if __name__ == '__main__':

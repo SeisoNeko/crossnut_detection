@@ -1,7 +1,10 @@
 import cv2
 import numpy as np
+import numpy.polynomial.polynomial as poly
 import matplotlib.pyplot as plt
+import math
 from cv2.typing import MatLike
+from ultralytics import YOLO
 if __name__ == "__main__":
     from kmeansgpu import kmeans_gpu
 else:
@@ -26,7 +29,7 @@ def is_sorted(l: list[int]) -> bool:
     return all(l[i] <= l[i + 1] for i in range(len(l) - 1))
 
 
-def find_scale(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> np.poly1d:
+def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> np.ndarray:
     labels_height = []
 
     # K-means clustering
@@ -56,13 +59,7 @@ def find_scale(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, 
                 
         hls = cv2.cvtColor(valid_pixels[np.newaxis, :, :], cv2.COLOR_BGR2HLS)[0].mean(axis=0)
         h, l, s = hls
-        
-            
-        # if max(bgr)-min(bgr) < 35: #black/white
-        #     if l < 80:
-        #         print("black")
-        #     else:
-        #         print("white")
+
         if s < 70 or l > 150 or max(bgr)-min(bgr) < 20: # black/white
             if l <= 72:
                 labels_height.append(BLACK_HEIGHT)
@@ -83,9 +80,25 @@ def find_scale(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, 
             labels_height.append(0)
             # print(f"--unknown--{labels_dir}")
 
-    # print()
-
-
+    #TODO: x,y對調 / 試試C(n,n-1)-->then? 怎麼比較? r^2?
+    parameters = poly.polyfit(positions[:,0], positions[:,1], 1)
+    a = -parameters[1]
+    b = 1
+    c = -parameters[0]
+    plumb_line = poly.Polynomial(parameters)
+    
+    
+    r2 = 1 - np.sum((positions[:,1] - plumb_line(positions[:,0]))**2) / np.sum((positions[:,1] - np.mean(positions[:,1]))**2)
+    print("r2: ", r2)
+    
+    for i, pos in enumerate(positions):
+        d = abs((a * pos[0] + b * pos[1] + c)) / (math.sqrt(a * a + b * b))
+        print(pos[0], pos[1], round(d,2))
+    
+    if r2 < 0.8:
+        plt.plot(positions[:,0], positions[:,1], 'yo', positions[:,0], plumb_line(positions[:,0]), '--k')
+        plt.show()
+    
     
     # remove duplicate blacks
     if labels_height.count("black") > 1:
@@ -105,15 +118,36 @@ def find_scale(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, 
     #     return None
     
     
-    positions_y = positions.transpose()[1]
+    positions_y = positions[:, 1]
     
-    poly = np.poly1d(np.polyfit(positions_y, labels_height, 2))
-    
-    print(poly)
-    # plt.plot(positions_y, labels_height, 'yo', positions_y, poly(positions_y), '--k')
-    
-    return poly
+    return np.array(list(zip(labels_height, positions_y)))
 
+
+def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO) -> np.ndarray:
+    # check if the output path is valid
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    if not os.path.exists(os.path.join(output_dir, 'num_detect')):
+        os.makedirs(os.path.join(output_dir, 'num_detect'))
+    
+
+    result = model.predict(img, project=output_dir, name='num_detect', exist_ok=True, conf=0.3, verbose=False)[0]
+    result.save(f"{output_dir}/num_detect/{img_name}_num_detect.png")
+
+    boxes = result.boxes
+    cls_ids = boxes.cls.cpu().numpy().astype(int) # 取出 class_id（物件編號 -> "數字幾-1"）
+    centers_y = boxes.xywh.cpu().numpy()[:, 1]  # 取中心點 y 座標
+    
+    positions = []
+    values = []
+    value_sample = [8, 18, 28, 38, 48, 58, 68, 78, 88] # class_id = 1~9
+
+    for cls_id, y in zip(cls_ids, centers_y):
+        if 0 <= cls_id < len(value_sample):  # 確保索引合法
+            positions.append(y)
+            values.append(value_sample[cls_id])
+
+    return np.array(list(zip(positions, values)))
 
 
 
@@ -124,7 +158,7 @@ if __name__ == "__main__":
     labels = []
     for image_file in os.listdir(input_dir):
         image_path = os.path.join(input_dir, image_file)  # Full path to the image
-        if not image_file.endswith('.png') or image_file.endswith('_kmeans.png'): continue
+        if not image_file.endswith('.png') or image_file.endswith('_kmeans.png') or image_file.startswith('labels'): continue
         labels.append(cv2.imread(image_path))
     
     
@@ -136,6 +170,4 @@ if __name__ == "__main__":
     confs = np.array([0.88742, 0.86251, 0.8286, 0.81845, 0.77712])
     output_dir = "output_directory"
  
-    find_scale(labels, positions, confs, output_dir)
-else:
-    from .kmeansgpu import kmeans_gpu
+    find_label_anchor(labels, positions, confs, output_dir)

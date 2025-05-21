@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import os
 
+from cv2.typing import MatLike
+
 # 克拉馬找交點
 def line_intersection(line1, line2):
     (x1, y1), (x2, y2) = line1
@@ -30,19 +32,21 @@ def line_intersection(line1, line2):
 
 # ---
 
-def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
+def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[int, int]:
     # check if the output path is valid
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     if not os.path.exists(os.path.join(output_dir, 'cross_point')):
         os.makedirs(os.path.join(output_dir, 'cross_point'))
 
-    # 讀取圖片
-    img = cv2.imread(image_path)
-    height, width = img.shape[:2]  # 取出高度與寬度
+    # 轉換成 BGR 格式
+    image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR) 
+
+    # 取出高度與寬度
+    height, width = image.shape[:2]
 
     # 灰階
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # 二值化（threshold 設為 1）
     _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
@@ -66,7 +70,7 @@ def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
         line_coords.append(((x1, y1), (x2, y2)))
         
         # 複製一張乾淨的底圖來畫線（避免每次都畫在同一張上）
-        img_copy = img.copy()
+        img_copy = image.copy()
         cv2.line(img_copy, (x1, y1), (x2, y2), (0, 255, 0), 1)
 
     # 嘗試所有線段組合找交點
@@ -76,9 +80,9 @@ def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
             pt = line_intersection(line_coords[i], line_coords[j])
             if pt:
                 x, y = pt
-                if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+                if 0 <= x < image.shape[1] and 0 <= y < image.shape[0]:
                     points.append((x, y))
-                    img[y, x] = (0, 0, 255)  # 把這個點設成紅色
+                    image[y, x] = (0, 0, 255)  # 把這個點設成紅色
                     # print("交點座標:", (x, y))
 
     ### 排除極端值
@@ -100,7 +104,7 @@ def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
         dist = np.sqrt((x - median_x)**2 + (y - median_y)**2)
         if dist < max_dist:
             good_points.append((x, y))
-            img[y, x] = (255, 0, 0)
+            image[y, x] = (255, 0, 0)
 
     ### 找最終交點位置
     good_points_arr = np.array(good_points)
@@ -113,9 +117,9 @@ def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
     final_x = int(np.round(mean_x))
     final_y = int(np.round(mean_y))
 
-    cv2.circle(img, (final_x, final_y), 2, (0, 255, 0), -1)
+    cv2.circle(image, (final_x, final_y), 2, (0, 255, 0), -1)
     # img[final_y, final_x] = (0, 255, 0)
-    cv2.putText(img, f"({final_x},{final_y})", (final_x + 20, final_y + 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(image, f"({final_x},{final_y})", (final_x + 20, final_y + 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     """
     print("加權平均後代表座標:", (final_x, final_y))
 
@@ -127,12 +131,7 @@ def find_cross_point(image_path: str, output_dir: str) -> tuple[int, int]:
     cv2.destroyAllWindows()
     """
 
-    # 設定輸出路徑
-    filename = os.path.basename(image_path) # 把檔名取出來，不要路徑
-    output_path = os.path.join(output_dir, 'cross_point', filename)
-    output_path = os.path.splitext(output_path)[0] + ".png"
-    cv2.imwrite(output_path, img)
-
+    cv2.imwrite(f"{output_dir}/cross_point/{img_name}_crosspoint.png", image)
     return (final_x, final_y)
 
 
