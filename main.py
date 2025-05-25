@@ -1,26 +1,52 @@
 import ultralytics
 import os
+import sys
 import time
 import cv2
 import numpy as np
 import traceback
+import pandas as pd
 
+from utils.zip_folder import zip_folder
 from utils.find_cross import find_cross
 from utils.find_label import find_label
 from utils.find_cross_point import find_cross_point
 from utils.find_anchor import find_label_anchor, find_number_anchor
+from PIL import Image, ImageDraw, ImageFont
+from tkinter import Tk, filedialog
 
 if __name__ == '__main__':
     cross_model = ultralytics.YOLO('model/cross_best.pt')
     label_model = ultralytics.YOLO('model/find_label_best.pt')
     number_model = ultralytics.YOLO('model/number_detection_best.pt')
 
+    #選擇圖片資料夾
+    root = Tk()
+    root.withdraw()
+    input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
+    print("選擇的資料夾是：", input_dir)
+
+    # 使用拖曳的方式取得圖片資料夾
+    if len(sys.argv) > 1:
+        input_dir = sys.argv[1]
+    else:
+        input_dir = './pics/colored_1' # default input image directory
     # input_dir = './pics/data'   # input image directory, change as your wish
     # input_dir = './pics/1140430-gov2'   # input image directory, change as your wish
-    input_dir = './pics/colored_1'   # input image directory, change as your wish
+    # input_dir = './pics/colored_1'   # input image directory, change as your wish
     output_dir = './output/colored_1' # output image directory
+    result_dir = './result' # result image directory
+    successed_path = os.path.join(result_dir, "successed")
+
+    failed_dir = os.path.join(result_dir, "failed")
+    os.makedirs(result_dir, exist_ok=True)
+    os.makedirs(successed_path, exist_ok=True)
+    os.makedirs(failed_dir, exist_ok=True)
+
+
 
     # Caculate inference time
+    results = []  # 存每張圖片的處理結果
     start_time = time.time()
 
     for image_file in os.listdir(input_dir):
@@ -38,6 +64,13 @@ if __name__ == '__main__':
 
             # no cross found
             if cross_img is None:
+                fail_save_path = os.path.join(failed_dir, image_file)
+                cv2.imwrite(fail_save_path, img)
+                results.append({
+                "filename": image_file,
+                "result(cm)": "failed"
+                })
+
                 print(f"No cross found in image {image_file}.")
                 continue
 
@@ -64,13 +97,57 @@ if __name__ == '__main__':
                 
             ### 建立擬合模型
             poly = np.poly1d(np.polyfit(anchors[:, 1], anchors[:, 0], 2))
-            
-            print("Estimate height: ", poly(cross_y))
+            rpoly = round(poly(cross_y),1)
+            results.append({
+            "filename": image_file,
+            "result(cm)": rpoly
+            })
+
+            # 要顯示的文字
+            text = f" {rpoly}"
+
+            # 將 cross_img 轉換為 PIL Image
+            pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(pil_img)
+            font_path = "C:/Windows/Fonts/msjh.ttc" 
+            font_size = 160  
+            font = ImageFont.truetype(font_path, font_size)
+
+            # 計算文字的邊界框
+            text_bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            img_width, img_height = pil_img.size
+            x = img_width - text_width - 160
+            y = img_height - text_height - 160
+            # 如果文字超出圖片範圍，則調整位置
+            if x < 0:
+                x = 0
+            if y < 0:
+                y = 0
+            # 如果文字超出圖片範圍，則調整位置
+            if x + text_width > img_width:
+                x = img_width - text_width
+            if y + text_height > img_height:
+                y = img_height - text_height
+            # 畫文字
+            draw.text((x, y), text, font=font, fill="black")
+            save_path = os.path.join(successed_path, f"{image_name}.jpg")
+            pil_img.save(save_path)
+            # 將 PIL Image 轉回 OpenCV 格式
+            print("Estimate height: ", rpoly)
             print()
 
             
 
         except Exception as e:
+            fail_save_path = os.path.join(failed_dir, image_file)
+            cv2.imwrite(fail_save_path, img)
+            results.append({
+            "filename": image_file,
+            "result(cm)": "failed"
+            })
+
             print(f"Error processing image {image_file}: {e}")
             print(traceback.print_exc())
             continue
@@ -79,3 +156,15 @@ if __name__ == '__main__':
     end_time = time.time()
     inference_time = end_time - start_time
     print(f"Inference time: {inference_time:.2f} seconds")
+    df = pd.DataFrame(results)
+    csv_path = os.path.join(result_dir, "results.csv")
+    df.to_csv(csv_path, index=False, encoding="utf-8-sig") 
+
+# 壓縮成功圖片
+success_zip_path = os.path.join(result_dir, "successed.zip")
+zip_folder(successed_path, success_zip_path)
+
+# 壓縮失敗圖片
+failed_zip_path = os.path.join(result_dir, "failed.zip")
+zip_folder(failed_dir, failed_zip_path)
+
