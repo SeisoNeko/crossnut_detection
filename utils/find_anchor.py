@@ -1,8 +1,8 @@
 import cv2
+import os
 import numpy as np
 import numpy.polynomial.polynomial as poly
 import matplotlib.pyplot as plt
-import math
 from cv2.typing import MatLike
 from ultralytics import YOLO
 if __name__ == "__main__":
@@ -27,6 +27,22 @@ def is_sorted(l: list[int]) -> bool:
         bool: True if the list is sorted, False otherwise.
     """
     return all(l[i] <= l[i + 1] for i in range(len(l) - 1))
+
+def check_transparent(image: MatLike, x1: int, y1: int, x2: int, y2: int, tolerance_ratio: float = 0.03) -> bool:
+    mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    cv2.line(mask, (x1, y1), (x2, y2), 255, 1)
+    alpha = image[:, :, 3]
+    line_alpha = cv2.bitwise_and(alpha, alpha, mask=mask)
+    
+    # 統計：總像素數 / 不透明像素數
+    total_line_pixels = cv2.countNonZero(mask)
+    opaque_pixels = cv2.countNonZero(line_alpha)
+
+    # 容忍透明像素數量為圖寬 × ratio，向上取整避免精度誤差
+    max_transparent_pixels = int(np.ceil(min(image.shape[:2]) * tolerance_ratio))
+    transparent_pixels = total_line_pixels - opaque_pixels
+
+    return transparent_pixels <= max_transparent_pixels
 
 
 def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> np.ndarray:
@@ -80,26 +96,17 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
             labels_height.append(0)
             # print(f"--unknown--{labels_dir}")
 
-    #TODO: x,y對調 / 試試C(n,n-1)-->then? 怎麼比較? r^2?
-    parameters = poly.polyfit(positions[:,0], positions[:,1], 1)
-    a = -parameters[1]
-    b = 1
-    c = -parameters[0]
-    plumb_line = poly.Polynomial(parameters)
+    # #TODO: x,y對調 / 試試C(n,n-1)-->then? 怎麼比較? r^2?
+    # x = positions[:,0]
+    # y = positions[:,1]
+    # plumb_line = poly.Polynomial.fit(x, y, 1)
     
+    # r2 = 1 - np.sum((y - plumb_line(x))**2) / np.sum((y - np.mean(y))**2)
+    # print("r2: ", r2)
     
-    r2 = 1 - np.sum((positions[:,1] - plumb_line(positions[:,0]))**2) / np.sum((positions[:,1] - np.mean(positions[:,1]))**2)
-    print("r2: ", r2)
-    
-    for i, pos in enumerate(positions):
-        d = abs((a * pos[0] + b * pos[1] + c)) / (math.sqrt(a * a + b * b))
-        print(pos[0], pos[1], round(d,2))
-    
-    if r2 < 0.8:
-        plt.plot(positions[:,0], positions[:,1], 'yo', positions[:,0], plumb_line(positions[:,0]), '--k')
-        plt.show()
-    
-    
+    # plt.plot(x, y, 'yo', x, plumb_line(x), '--k')
+    # plt.show()
+
     # remove duplicate blacks
     if labels_height.count("black") > 1:
         indexs = [i for i, color in enumerate(labels_height) if color == "black"]
@@ -109,18 +116,29 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
                 labels_height.pop(i)
                 confs.pop(i)
                 positions = np.delete(positions, i, axis=0)
-
                 
-    # # check if the order of y and color is matched
-    # datas.sort(key=lambda x: x[1])  # Sort by y coordinate
-    # if not is_sorted([d[0] for d in datas]):
-    #     print("Error: y coordinates are not sorted.")
-    #     return None
+    if labels_height.count("white") > 1:
+        indexs = [i for i, color in enumerate(labels_height) if color == "white"]
+        max_index = max(indexs, key=lambda x: confs[x])
+        for i in indexs:
+            if i != max_index:
+                labels_height.pop(i)
+                confs.pop(i)
+                positions = np.delete(positions, i, axis=0)
     
     
     positions_y = positions[:, 1]
-    
-    return np.array(list(zip(labels_height, positions_y)))
+    anchors = sorted(list(zip(labels_height, positions_y)), key=lambda x: x[1])
+    tmp = []
+    for i, (height, y) in enumerate(anchors):
+        if height == BLACK_HEIGHT and i != 0:
+            continue
+        if height == WHITE_HEIGHT and i != len(anchors) - 1:
+            continue
+        else:
+            tmp.append((height, y))
+
+    return np.array(tmp)
 
 
 def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO) -> np.ndarray:
@@ -131,7 +149,7 @@ def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO
         os.makedirs(os.path.join(output_dir, 'num_detect'))
     
 
-    result = model.predict(img, project=output_dir, name='num_detect', exist_ok=True, conf=0.3, verbose=False)[0]
+    result = model.predict(cv2.cvtColor(img, cv2.COLOR_BGRA2BGR), project=output_dir, name='num_detect', exist_ok=True, conf=0.3, verbose=False)[0]
     result.save(f"{output_dir}/num_detect/{img_name}_num_detect.png")
 
     boxes = result.boxes
@@ -152,7 +170,6 @@ def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO
 
 
 if __name__ == "__main__":
-    import os
     input_dir = './output/final/labels/P_20250430_143423'  # Directory containing cropped images
 
     labels = []

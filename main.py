@@ -15,24 +15,25 @@ if __name__ == '__main__':
     label_model = ultralytics.YOLO('model/find_label_best.pt')
     number_model = ultralytics.YOLO('model/number_detection_best.pt')
 
+    # input_dir = './pics/data'   # input image directory, change as your wish
     # input_dir = './pics/1140430-gov2'   # input image directory, change as your wish
     input_dir = './pics/colored_1'   # input image directory, change as your wish
-    # input_dir = '../photos/labeled_cross_photos'   # input image directory, change as your wish
-    output_dir = './output/final' # output image directory
+    output_dir = './output/colored_1' # output image directory
 
     # Caculate inference time
     start_time = time.time()
 
     for image_file in os.listdir(input_dir):
         try:
-            print(f"\n{image_file}")
+            if not image_file.endswith(('.jpg', '.png', '.jpeg', '.webp')):
+                continue
+            
+            print(f"Processing image: {image_file}")
             image_name = image_file.split('.')[0]
             
             ### find cross image from original image
             img_path = os.path.join(input_dir, image_file)
             img = cv2.imread(img_path)
-            print(f"Processing image: {image_file}")
-
             cross_img = find_cross(img, img_name=image_name, output_dir=output_dir, model=cross_model)
 
             # no cross found
@@ -40,30 +41,32 @@ if __name__ == '__main__':
                 print(f"No cross found in image {image_file}.")
                 continue
 
+            # cross_img, cross_point, straight_line = temp
+            # print(f"Image: {image_file}")
+            # print(f"new Cross point: ({cross_point[0]}, {cross_point[1]})")
+            
             ### find label nums and positions
             temp = find_label(cross_img, img_name=image_name, output_dir=output_dir, model=label_model)
             label_count, label_centers, label_confs, label_imgs = temp
             
-            # print(f"Image: {cross_img_name}, Number of labels: {label_count} \nPositions: \n{label_positions}")
+            print(f"Number of labels: {label_count}")
 
             ### find cross point
             cross_x, cross_y = find_cross_point(cross_img, image_name, output_dir)
             print(f"Cross point: ({cross_x}, {cross_y})")
-
-
-
+                
             labels_dir = os.path.join(output_dir, 'labels', image_name)
             anchors = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir)
                 
-                    
             if anchors.shape[0] <= 2: # can't use interpolation (插值)
                 number_anchor = find_number_anchor(cross_img, output_dir, image_name, number_model)
                 anchors = np.concatenate((anchors, number_anchor), axis=0)
                 
-            
-            poly = np.poly1d(np.polyfit(anchors[:, 1], anchors[:, 0], 2))  # 建立擬合模型
+            ### 建立擬合模型
+            poly = np.poly1d(np.polyfit(anchors[:, 1], anchors[:, 0], 2))
             
             print("Estimate height: ", poly(cross_y))
+            print()
 
             
 

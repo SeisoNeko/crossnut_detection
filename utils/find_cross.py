@@ -3,8 +3,39 @@ import numpy as np
 import os
 from cv2.typing import MatLike
 from ultralytics import YOLO
+if __name__ == "__main__":
+    from find_cross_point import line_intersection
+else:
+    from .find_cross_point import line_intersection
 
-def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> MatLike | None:
+# def get_edge_center(image: MatLike, h: int) -> list[int]:
+#     row = image[h, :, 3]
+#     edges = np.where((row[:-1] == 0) & (row[1:] == 255))[0] + 1
+#     ends = np.where((row[:-1] == 255) & (row[1:] == 0))[0]
+#     if row[0] == 255:
+#         edges = np.insert(edges, 0, 0)
+#     if row[-1] == 255:
+#         ends = np.append(ends, len(row) - 1)
+#     return ((edges + ends) // 2).tolist()
+
+# def check_transparent(image: MatLike, x1: int, y1: int, x2: int, y2: int, tolerance_ratio: float = 0.03) -> bool:
+#     mask = np.zeros(image.shape[:2], dtype=np.uint8)
+#     cv2.line(mask, (x1, y1), (x2, y2), 255, 1)
+#     alpha = image[:, :, 3]
+#     line_alpha = cv2.bitwise_and(alpha, alpha, mask=mask)
+    
+#         # 統計：總像素數 / 不透明像素數
+#     total_line_pixels = cv2.countNonZero(mask)
+#     opaque_pixels = cv2.countNonZero(line_alpha)
+
+#     # 容忍透明像素數量為圖寬 × ratio，向上取整避免精度誤差
+#     max_transparent_pixels = int(np.ceil(min(image.shape[:2]) * tolerance_ratio))
+#     transparent_pixels = total_line_pixels - opaque_pixels
+
+#     return transparent_pixels <= max_transparent_pixels
+    
+
+def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> tuple[MatLike, tuple, tuple] | None:
     """
     Find cross in images using a YOLO model and save the results.
 
@@ -27,7 +58,6 @@ def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> M
         os.makedirs(os.path.join(output_dir, 'masked'))
           
 
-    # results = model.predict(image_path, save_crop = True, project = output_dir, name='cross', exist_ok=True, retina_masks=True)
     results = model.predict(image, project = output_dir, name='cross', exist_ok=True, retina_masks=True, verbose=False)
     result = results[0] # one image only
 
@@ -62,8 +92,56 @@ def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> M
     iso_crop = isolated[y1:y2, x1:x2]
     iso_crop_bgra = isolated_gbra[y1:y2, x1:x2]
     cv2.imwrite(f"{output_dir}/crops/{img_name}_{label}.png", iso_crop_bgra)
-    
     return iso_crop_bgra
+
+    # crop_copy = np.copy(iso_crop_bgra)
+    # tmp = []
+    # height, width = crop_copy.shape[:2]
+
+    # for n in range(2):
+    #     bottom_candidates = []      
+    #     first = True  
+    #     for h1 in range(height // 3):
+    #         done = False
+    #         top_centers = get_edge_center(crop_copy, h1)
+    #         if not top_centers: continue
+                
+    #         if first:
+    #             first = False
+    #             for h2 in range(height-1, height // 3, -1):
+    #                 bottom_centers = get_edge_center(crop_copy, h2)
+    #                 if bottom_centers:
+    #                     bottom_candidates.append((h2, bottom_centers))
+
+    #                 for x1 in top_centers:
+    #                     for x2 in bottom_centers:
+    #                         if check_transparent(crop_copy, x1, h1, x2, h2):
+    #                             tmp.extend([(x1, h1), (x2, h2)] if n == 0 else [(h1, x1), (h2, x2)])
+    #                             done = True
+    #                             break
+    #                     if done: break
+    #                 if done: break
+    #             if done: break
+    #         else:
+    #             for x1 in top_centers:
+    #                 for h2, bottom_centers in bottom_candidates:
+    #                     for x2 in bottom_centers:
+    #                         if check_transparent(crop_copy, x1, h1, x2, h2):
+    #                             tmp.extend([(x1, h1), (x2, h2)] if n == 0 else [(h1, x1), (h2, x2)])
+    #                             done = True
+    #                             break
+    #                     if done: break
+    #                 if done: break
+    #             if done: break
+        
+    #     crop_copy = cv2.transpose(crop_copy)
+    #     height, width = width, height
+    
+    # up, down, left, right = tmp
+    # intersection = line_intersection((up, down), (left, right))
+    
+    
+    # return iso_crop_bgra, intersection, (up, down)
 
 
 if __name__ == '__main__':

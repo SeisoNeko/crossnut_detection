@@ -5,7 +5,7 @@ import os
 from cv2.typing import MatLike
 
 # 克拉馬找交點
-def line_intersection(line1, line2):
+def line_intersection(line1: tuple[int, int], line2: tuple[int, int]) -> tuple[int, int] | None:
     (x1, y1), (x2, y2) = line1
     (x3, y3), (x4, y4) = line2
     a1 = x2 - x1
