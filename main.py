@@ -27,7 +27,7 @@ if __name__ == '__main__':
         try:
             if not image_file.endswith(('.jpg', '.png', '.jpeg', '.webp')):
                 continue
-            
+                            
             print(f"Processing image: {image_file}")
             image_name = image_file.split('.')[0]
             
@@ -51,8 +51,17 @@ if __name__ == '__main__':
             
             print(f"Number of labels: {label_count}")
 
+            anchors = []
+            if label_count > 0:
+                labels_dir = os.path.join(output_dir, 'labels', image_name)
+                anchors = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir)
+                
+            if len(anchors) <= 2: # can't use interpolation (插值)
+                number_anchor = find_number_anchor(cross_img, output_dir, image_name, number_model)
+                anchors.extend(number_anchor)
+            
             ### find cross point
-            cross_point = find_cross_point(cross_img, image_name, output_dir)
+            cross_point = find_cross_point(cross_img, output_dir, image_name)
 
             # no cross point found
             if cross_point == None:
@@ -61,20 +70,14 @@ if __name__ == '__main__':
 
             cross_x, cross_y = cross_point
             print(f"Cross point: ({cross_x}, {cross_y})")
-
-            labels_dir = os.path.join(output_dir, 'labels', image_name)
-            anchors = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir)
-
-            if anchors.shape[0] <= 2: # can't use interpolation (插值)
-                number_anchor = find_number_anchor(cross_img, output_dir, image_name, number_model)
-                anchors = np.concatenate((anchors, number_anchor), axis=0)
+            
             
             ### 建立擬合模型
-            poly = np.poly1d(np.polyfit(anchors[:, 1], anchors[:, 0], 2))
+            pixels_y, heights = zip(*anchors)
+            poly = np.poly1d(np.polyfit(pixels_y, heights, 2))
             
             print("Estimate height: ", poly(cross_y))
             print()
-
             
 
         except Exception as e:

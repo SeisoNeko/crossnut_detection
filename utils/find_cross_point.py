@@ -34,7 +34,7 @@ def line_intersection(line1: tuple[int, int], line2: tuple[int, int]) -> tuple[i
 
 # ---
 
-def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[int, int] | None:
+def find_cross_point(image: MatLike, output_dir: str, img_name: str) -> tuple[int, int] | None:
     # check if the output path is valid
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

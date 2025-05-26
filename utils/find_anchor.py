@@ -45,7 +45,7 @@ def check_transparent(image: MatLike, x1: int, y1: int, x2: int, y2: int, tolera
     return transparent_pixels <= max_transparent_pixels
 
 
-def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> np.ndarray:
+def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> list[tuple[int, int]]:
     labels_height = []
 
     # K-means clustering
@@ -136,13 +136,13 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
         if height == WHITE_HEIGHT and i != len(anchors) - 1:
             continue
         else:
-            tmp.append((height, y))
+            tmp.append((y, height))
 
-    return np.array(tmp)
+    return tmp
 
 
-def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO) -> np.ndarray:
-    # check if the output path is valid
+def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO) -> list[tuple[int, int]]:
+    # check if the output path is valid    # check if the output path is valid
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     if not os.path.exists(os.path.join(output_dir, 'num_detect')):
@@ -165,7 +165,7 @@ def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO
             positions.append(y)
             values.append(value_sample[cls_id])
 
-    return np.array(list(zip(positions, values)))
+    return list(zip(positions, values))
 
 
 
