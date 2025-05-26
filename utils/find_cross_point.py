@@ -34,7 +34,7 @@ def line_intersection(line1: tuple[int, int], line2: tuple[int, int]) -> tuple[i
 
 # ---
 
-def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[int, int]:
+def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[int, int] | None:
     # check if the output path is valid
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -94,6 +94,7 @@ def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[in
 
     # 儲存直線座標
     line_coords = []
+    ### debug
     # i = 0
     for line in lines:
         x1, y1, x2, y2 = line[0]
@@ -111,6 +112,7 @@ def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[in
         # cv2.destroyWindow(f"{i}")  # 顯示完關掉目前這個小視窗
         # i = i + 1
 
+    ### debug
     # print(f"有 {i} 個線")
 
     # 嘗試所有線段組合找交點
@@ -127,7 +129,13 @@ def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[in
                     image[y, x] = (0, 0, 255)  # 把這個點設成紅色
                     # print("交點座標:", (x, y))
 
-    print(f"有 {len(points)} 個點")
+    ### debug
+    # print(f"Number of HoughLinesP intersection: {len(points)} ")
+
+    # 檢查交點數量 -> 找不到交點回傳 None
+    if len(points) == 0:
+        # print("Failed: No HoughLinesP intersection found.")
+        return None
 
     ### 排除極端值
     points_arr = np.array(points)
@@ -177,9 +185,9 @@ def find_cross_point(image: MatLike, img_name: str, output_dir: str) -> tuple[in
 
     cv2.imwrite(f"{output_dir}/cross_point/{img_name}_crosspoint.png", image)
 
-    end_time = time.time()
-
-    print(f"Find cross point total time: {(end_time - start_time) * 1000}ms")
+    ### debug
+    # end_time = time.time()
+    # print(f"Find cross point total time: {(end_time - start_time) * 1000}ms")
 
     return (final_x, final_y)
 

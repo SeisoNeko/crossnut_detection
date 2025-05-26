@@ -11,14 +11,14 @@ from utils.find_cross_point import find_cross_point
 from utils.find_anchor import find_label_anchor, find_number_anchor
 
 if __name__ == '__main__':
-    cross_model = ultralytics.YOLO('model/cross_best.pt')
+    cross_model = ultralytics.YOLO('model/cross_best_yolo11n-seg.pt')
     label_model = ultralytics.YOLO('model/find_label_best.pt')
     number_model = ultralytics.YOLO('model/number_detection_best.pt')
 
     # input_dir = './pics/data'   # input image directory, change as your wish
     # input_dir = './pics/1140430-gov2'   # input image directory, change as your wish
-    input_dir = './pics/colored_1'   # input image directory, change as your wish
-    output_dir = './output/colored_1' # output image directory
+    input_dir = '../photos/labeled_cross_photos'   # input image directory, change as your wish
+    output_dir = './output/final/labeled_cross_photos2' # output image directory
 
     # Caculate inference time
     start_time = time.time()
@@ -44,7 +44,7 @@ if __name__ == '__main__':
             # cross_img, cross_point, straight_line = temp
             # print(f"Image: {image_file}")
             # print(f"new Cross point: ({cross_point[0]}, {cross_point[1]})")
-            
+
             ### find label nums and positions
             temp = find_label(cross_img, img_name=image_name, output_dir=output_dir, model=label_model)
             label_count, label_centers, label_confs, label_imgs = temp
@@ -52,16 +52,23 @@ if __name__ == '__main__':
             print(f"Number of labels: {label_count}")
 
             ### find cross point
-            cross_x, cross_y = find_cross_point(cross_img, image_name, output_dir)
+            cross_point = find_cross_point(cross_img, image_name, output_dir)
+
+            # no cross point found
+            if cross_point == None:
+                print("No HoughLinesP intersection found.")
+                continue
+
+            cross_x, cross_y = cross_point
             print(f"Cross point: ({cross_x}, {cross_y})")
-                
+
             labels_dir = os.path.join(output_dir, 'labels', image_name)
             anchors = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir)
-                
+
             if anchors.shape[0] <= 2: # can't use interpolation (插值)
                 number_anchor = find_number_anchor(cross_img, output_dir, image_name, number_model)
                 anchors = np.concatenate((anchors, number_anchor), axis=0)
-                
+            
             ### 建立擬合模型
             poly = np.poly1d(np.polyfit(anchors[:, 1], anchors[:, 0], 2))
             
