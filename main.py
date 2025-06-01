@@ -30,19 +30,21 @@ if __name__ == '__main__':
             else:
                 input_dir = sys.argv[1]
         else:
-            input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
-            # input_dir = './pics/colored_1'
+            # input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
+            input_dir = './pics/colored_1'
         
         print("選擇的資料夾是：", input_dir)
-        temp_dir = os.path.join('./temp', input_dir.split('/')[-1]) # temporary image directory
         output_dir = os.path.join('./output', input_dir.split('/')[-1]) # output image directory
+        temp_dir = os.path.join(output_dir, 'Temp') # temporary image directory
         success_dir = os.path.join(output_dir, 'OK') # result image directory
         warning_dir = os.path.join(output_dir, 'Warning') # result image directory
-        
+        failed_dir = os.path.join(output_dir, 'Failed') # failed image directory
+
         os.makedirs(temp_dir, exist_ok=True)
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(success_dir, exist_ok=True)
         os.makedirs(warning_dir, exist_ok=True)
+        os.makedirs(failed_dir, exist_ok=True)
 
         # Caculate inference time
         start_time = time.time()
@@ -52,7 +54,7 @@ if __name__ == '__main__':
             try:
                 if not image_file.endswith(('.jpg', '.png', '.jpeg', '.webp')):
                     continue
-                
+
                 print()    
                 print(f"正在處理: {image_file}")
                 image_name = image_file.split('.')[0]
@@ -66,6 +68,8 @@ if __name__ == '__main__':
                 if cross_img is None:
                     print(f"在圖片中找不到十字!")
                     result[image_name] = "no-cross"
+                    texted_img = draw_text(img, "no-cross", text_color=(0, 0, 255))
+                    cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
                     continue
 
                 # cross_img, cross_point, straight_line = temp
@@ -90,6 +94,8 @@ if __name__ == '__main__':
                 if len(anchors) <= 2: # still can't use interpolation
                     print(f"找不到足夠的錨點來計算高度: {len(anchors)}")
                     result[image_name] = "not-enouth-anchors"
+                    texted_img = draw_text(img, "not-enouth-anchors", text_color=(0, 0, 255))
+                    cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
                     continue
                 
                 ### find cross point
@@ -99,6 +105,8 @@ if __name__ == '__main__':
                 if cross_point == None:
                     print("找不到十字交點!")
                     result[image_name] = "no-cross-point"
+                    texted_img = draw_text(img, "no-cross-point", text_color=(0, 0, 255))
+                    cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
                     continue
 
                 cross_x, cross_y = cross_point
@@ -111,27 +119,21 @@ if __name__ == '__main__':
                 estimated_height = height_estimator(cross_y)
                 if warning:
                     print(f"估計高度(警告): {estimated_height:.1f}cm")
-                else:
-                    print(f"估計高度: {estimated_height:.1f}cm")
-                
-                if warning:
                     result[image_name] = f"*{estimated_height:.1f}cm"
                     texted_img = draw_text(img, f"*{estimated_height:.1f}cm", text_color=(0, 0, 255))
                     cv2.imwrite(f"{warning_dir}/{image_name}.png", texted_img)
                 else:
+                    print(f"估計高度: {estimated_height:.1f}cm")
                     result[image_name] = f"{estimated_height:.1f}cm"
                     texted_img = draw_text(img, f"{estimated_height:.1f}cm")
                     cv2.imwrite(f"{success_dir}/{image_name}.png", texted_img)
-                
-                # result[image_name] = "*" if warning else ""
-                # result[image_name] += f"{estimated_height:.1f}cm"
-                
-                # texted_img = draw_text(img, result[image_name])
-                # cv2.imwrite(f"{warning_dir if warning else success_dir}/{image_name}.png", texted_img)
+
                 
             except Exception as e:
                 print(f"Error processing image {image_file}: {e}")
                 result[image_name] = "error"
+                texted_img = draw_text(img, "error", text_color=(0, 0, 255))
+                cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
                 # traceback.print_exc()
                 continue
 

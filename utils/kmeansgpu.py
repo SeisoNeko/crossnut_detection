@@ -1,11 +1,19 @@
-import cupy as cp
-import numpy as np
 import cv2
 import time
 from cv2.typing import MatLike
 from PIL import Image
 from matplotlib import pyplot as plt
 from pathlib import Path
+
+import numpy as np
+try:
+    import cupy as cp
+    if not cp.cuda.is_available():
+        cp = np
+except:
+    pass
+
+
 
 yellow_lower = np.array([20, 80, 50], np.uint8)
 yellow_upper = np.array([35, 255, 255], np.uint8)
@@ -106,7 +114,12 @@ def kmeans_gpu(img: MatLike) -> MatLike:
     # print(f"k-means completed in {end_time - start_time:.2f} seconds.")
 
     # Reconstruct the full image with clustered colors
-    clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))  # Convert back to NumPy
+    clustered_flat_rgb = None
+    if (cp == np):
+        clustered_flat_rgb = centroids[:, cluster_assignments].T.astype(np.uint8)
+    else:
+        clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))  # Convert back to NumPy
+    
     reconstructed_rgb = np.zeros((flat_rgb.shape[0], 3), dtype=np.uint8)  # Initialize with zeros
     reconstructed_rgb[non_transparent_mask] = clustered_flat_rgb  # Map clustered colors to non-transparent pixels
 
