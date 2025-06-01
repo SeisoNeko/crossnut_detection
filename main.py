@@ -151,7 +151,42 @@ if __name__ == '__main__':
         
         ### Save results to a csv file
         result_file = os.path.join(output_dir, 'results.csv')
+        with open(result_file, 'w',encoding='utf-8-sig') as f:
+            f.write("Image, Result\n")
+            for img_name, res in result.items():
+                f.write(f"{img_name}, {res}\n")
+        ### Save results to a csv file
+        result_file = os.path.join(output_dir, 'results.csv')
+
+        success_count = 0
+        warning_count = 0
+        failed_count = 0
+
+        def get_status(val):
+            if isinstance(val, str):
+                if val.startswith("*") and val.endswith("*"):
+                    return 'warning'
+                elif val == 'error' or val == 'not-enouth-anchors' or val == 'no-cross' or val == 'no-cross-point':
+                    return 'failed'
+                else:
+                    return 'success'
+            else:
+                return 'failed'
+
         with open(result_file, 'w') as f:
             f.write("Image, Result\n")
             for img_name, res in result.items():
                 f.write(f"{img_name}, {res}\n")
+                status = get_status(res)
+                if status == 'success':
+                    success_count += 1
+                elif status == 'warning':
+                    warning_count += 1
+                else:
+                    failed_count += 1
+
+            # 寫入統計數字
+            f.write("\n")
+            f.write(f"Success:, {success_count}\n")
+            f.write(f"Warning:, {warning_count}\n")
+            f.write(f"Failed:, {failed_count}\n")
