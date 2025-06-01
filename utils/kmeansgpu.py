@@ -1,14 +1,16 @@
-import cupy as cp
-import numpy as np
 import cv2
 import time
+import os
 from cv2.typing import MatLike
 from PIL import Image
 from matplotlib import pyplot as plt
 from pathlib import Path
 
+import numpy as np
+cp = None
 yellow_lower = np.array([20, 80, 50], np.uint8)
 yellow_upper = np.array([35, 255, 255], np.uint8)
+
 
 # Do iterations to find the centroids of the clusters
 def color_Iteration(init_centroids, k, Y):
@@ -55,8 +57,10 @@ def error_iteration(centroids, k, N, Y, batch_size=10000, epsilon=0.5):
     return centroids, cluster_assignments
 
 
-def kmeans_gpu(img: MatLike) -> MatLike:
-    # Load the image with transparency (RGBA)
+def kmeans_gpu(img: MatLike, device: str) -> MatLike:
+    global cp
+    if device == "cuda": import cupy as cp
+    else: cp = np
     
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     yellow_mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
@@ -106,7 +110,12 @@ def kmeans_gpu(img: MatLike) -> MatLike:
     # print(f"k-means completed in {end_time - start_time:.2f} seconds.")
 
     # Reconstruct the full image with clustered colors
-    clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))  # Convert back to NumPy
+    clustered_flat_rgb = None
+    if (cp == np):
+        clustered_flat_rgb = centroids[:, cluster_assignments].T.astype(np.uint8)
+    else:
+        clustered_flat_rgb = cp.asnumpy(centroids[:, cluster_assignments].T.astype(np.uint8))  # Convert back to NumPy
+    
     reconstructed_rgb = np.zeros((flat_rgb.shape[0], 3), dtype=np.uint8)  # Initialize with zeros
     reconstructed_rgb[non_transparent_mask] = clustered_flat_rgb  # Map clustered colors to non-transparent pixels
 

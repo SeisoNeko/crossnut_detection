@@ -1,8 +1,6 @@
 import cv2
 import os
 import numpy as np
-import numpy.polynomial.polynomial as poly
-import matplotlib.pyplot as plt
 from cv2.typing import MatLike
 from ultralytics import YOLO
 if __name__ == "__main__":
@@ -45,11 +43,12 @@ def check_transparent(image: MatLike, x1: int, y1: int, x2: int, y2: int, tolera
     return transparent_pixels <= max_transparent_pixels
 
 
-def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> list[tuple[int, int]]:
+def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str, device: str) -> tuple[list[tuple[int, int]], bool]:
     labels_height = []
+    warning = False
 
     # K-means clustering
-    mean_labels = list(map(kmeans_gpu, labels))
+    mean_labels = list(map(kmeans_gpu, labels, [device for _ in labels]))
     for i, img in enumerate(mean_labels):
         cv2.imwrite(f"{labels_dir}/label_{i}_kmeans.png", img)
 
@@ -109,6 +108,7 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
 
     # remove duplicate blacks
     if labels_height.count("black") > 1:
+        warning = True
         indexs = [i for i, color in enumerate(labels_height) if color == "black"]
         max_index = max(indexs, key=lambda x: confs[x])
         for i in indexs:
@@ -118,6 +118,7 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
                 positions = np.delete(positions, i, axis=0)
                 
     if labels_height.count("white") > 1:
+        warning = True
         indexs = [i for i, color in enumerate(labels_height) if color == "white"]
         max_index = max(indexs, key=lambda x: confs[x])
         for i in indexs:
@@ -132,21 +133,21 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
     tmp = []
     for i, (height, y) in enumerate(anchors):
         if height == BLACK_HEIGHT and i != 0:
+            warning = True
             continue
         if height == WHITE_HEIGHT and i != len(anchors) - 1:
+            warning = True
             continue
         else:
             tmp.append((y, height))
 
-    return tmp
+    return tmp, warning
 
 
 def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO) -> list[tuple[int, int]]:
     # check if the output path is valid    # check if the output path is valid
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    if not os.path.exists(os.path.join(output_dir, 'num_detect')):
-        os.makedirs(os.path.join(output_dir, 'num_detect'))
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(f"{output_dir}/num_detect", exist_ok=True)
     
 
     result = model.predict(cv2.cvtColor(img, cv2.COLOR_BGRA2BGR), project=output_dir, name='num_detect', exist_ok=True, conf=0.3, verbose=False)[0]

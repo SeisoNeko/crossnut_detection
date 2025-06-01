@@ -8,13 +8,15 @@ def upscale_image(input_path, output_dir, options='', model='RealESRGAN_x4plus')
     - input_path: Path to the input image.
     - output_dir: Path to save the upscaled image.
     """
+    os.makedirs(output_dir, exist_ok=True)  # Ensure output directory exists
+    
     path = os.path.join(os.getcwd(), 'Real_ESRGAN')
     if os.getcwd() != path:
         try:
             os.chdir(path)
         except FileNotFoundError: 
             pass
-    os.system('python inference_realesrgan.py -n {} -i {} -o {} {}'.format(model, input_path, output_dir, options))
+    os.system(f'python inference_realesrgan.py -n {model} -i {input_path} -o {output_dir} {options}')
 
 if __name__ == '__main__':
 

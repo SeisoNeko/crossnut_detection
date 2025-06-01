@@ -50,12 +50,9 @@ def find_cross(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
     """
     
     # check if the output path is valid
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    if not os.path.exists(os.path.join(output_dir, 'crops')):
-        os.makedirs(os.path.join(output_dir, 'crops'))
-    if not os.path.exists(os.path.join(output_dir, 'masked')):
-        os.makedirs(os.path.join(output_dir, 'masked'))
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(f"{output_dir}/crops", exist_ok=True)
+    os.makedirs(f"{output_dir}/masked", exist_ok=True)
 
     results = model.predict(image, project = output_dir, name='cross', exist_ok=True, retina_masks=True, verbose=False)
     result = results[0] # one image only
