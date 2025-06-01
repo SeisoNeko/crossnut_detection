@@ -73,7 +73,7 @@ if __name__ == '__main__':
                     print(f"在圖片中找不到十字!")
                     result[image_name] = "no-cross"
                     texted_img = draw_text(img, "no-cross", text_color=(0, 0, 255))
-                    cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
+                    cv2.imwrite(f"{failed_dir}/{image_name}.jpg", texted_img)
                     continue
 
                 # cross_img, cross_point, straight_line = temp
@@ -102,7 +102,7 @@ if __name__ == '__main__':
                     print(f"找不到足夠的錨點來計算高度: {len(anchors)}")
                     result[image_name] = "not-enouth-anchors"
                     texted_img = draw_text(img, "not-enouth-anchors", text_color=(0, 0, 255))
-                    cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
+                    cv2.imwrite(f"{failed_dir}/{image_name}.jpg", texted_img)
                     continue
                 
                 ### find cross point
@@ -113,7 +113,7 @@ if __name__ == '__main__':
                     print("找不到十字交點!")
                     result[image_name] = "no-cross-point"
                     texted_img = draw_text(img, "no-cross-point", text_color=(0, 0, 255))
-                    cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
+                    cv2.imwrite(f"{failed_dir}/{image_name}.jpg", texted_img)
                     continue
 
                 cross_x, cross_y = cross_point
@@ -128,19 +128,19 @@ if __name__ == '__main__':
                     print(f"估計高度(警告): {estimated_height:.1f}cm")
                     result[image_name] = f"*{estimated_height:.1f}cm*"
                     texted_img = draw_text(img, f"*{estimated_height:.1f}cm*", text_color=(0, 0, 255))
-                    cv2.imwrite(f"{warning_dir}/{image_name}.png", texted_img)
+                    cv2.imwrite(f"{warning_dir}/{image_name}.jpg", texted_img)
                 else:
                     print(f"估計高度: {estimated_height:.1f}cm")
                     result[image_name] = f"{estimated_height:.1f}cm"
                     texted_img = draw_text(img, f"{estimated_height:.1f}cm")
-                    cv2.imwrite(f"{success_dir}/{image_name}.png", texted_img)
+                    cv2.imwrite(f"{success_dir}/{image_name}.jpg", texted_img)
 
                 
             except Exception as e:
                 print(f"Error processing image {image_file}: {e}")
                 result[image_name] = "error"
                 texted_img = draw_text(img, "error", text_color=(0, 0, 255))
-                cv2.imwrite(f"{failed_dir}/{image_name}.png", texted_img)
+                cv2.imwrite(f"{failed_dir}/{image_name}.jpg", texted_img)
                 # traceback.print_exc()
                 continue
 
