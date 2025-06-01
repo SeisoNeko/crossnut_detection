@@ -32,14 +32,11 @@ def line_intersection(line1: tuple[int, int], line2: tuple[int, int]) -> tuple[i
     # return int(px), int(py)
     return px, py
 
-# ---
 
 def find_cross_point(image: MatLike, output_dir: str, img_name: str) -> tuple[int, int] | None:
     # check if the output path is valid
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    if not os.path.exists(os.path.join(output_dir, 'cross_point')):
-        os.makedirs(os.path.join(output_dir, 'cross_point'))
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(f"{output_dir}/cross_point", exist_ok=True)
 
     start_time = time.time()
 
@@ -196,9 +193,6 @@ if __name__ == "__main__":
     import os
     # input_dir = './temp/crops'  # Directory containing cropped images
     output_dir = '../output/temp'
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
 
     img_name = "PXL_20250415_094502342_cross.png"
     img_path = "../output/labeled_cross_photos/crops/PXL_20250415_094502342_cross.png"

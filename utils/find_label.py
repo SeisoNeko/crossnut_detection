@@ -23,10 +23,9 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
         number_of_label: Number of labels detected in the image.
         labels_position: List of positions of the detected labels.
     """
-    if not os.path.exists(os.path.join(output_dir, 'labels')):
-        os.makedirs(os.path.join(output_dir, 'labels'))
-    if not os.path.exists(os.path.join(output_dir, f'labels/{img_name}')):
-        os.makedirs(os.path.join(output_dir, f'labels/{img_name}'))
+    os.makedirs(output_dir, exist_ok=True) 
+    os.makedirs(f"{output_dir}/labels", exist_ok=True) 
+    os.makedirs(f"{output_dir}/labels/{img_name}", exist_ok=True)
         
     # if not os.path.exists(os.path.join(output_dir, 'kmeans')):
     #     os.makedirs(os.path.join(output_dir, 'kmeans'))    
@@ -41,11 +40,11 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
     result = results[0]  # one image only
     result.save(os.path.join(output_dir, f"labels/{img_name}/labels.png"))  # Save the results
     
-    xywh = result.boxes.xywh  # center-x, center-y, width, height
-    xywhn = result.boxes.xywhn  # normalized
+    # xywh = result.boxes.xywh  # center-x, center-y, width, height
+    # xywhn = result.boxes.xywhn  # normalized
     xyxy = result.boxes.xyxy  # top-left-x, top-left-y, bottom-right-x, bottom-right-y
-    xyxyn = result.boxes.xyxyn  # normalized
-    names = [result.names[cls.item()] for cls in result.boxes.cls.int()]  # class name of each box
+    # xyxyn = result.boxes.xyxyn  # normalized
+    # names = [result.names[cls.item()] for cls in result.boxes.cls.int()]  # class name of each box
     confs = result.boxes.conf.cpu().numpy().squeeze().astype(float) # confidence score of each box
 
     number_of_labels = len(xyxy)
@@ -56,6 +55,9 @@ def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> t
         labels = []
         labels_center = []
         # iterate each labels cordinates
+        if number_of_labels == 1:
+            labels_position = [labels_position]  # Ensure labels_position is a list of tuples even for a single label
+        
         for i, (x1, y1, x2, y2) in enumerate(labels_position):
             crop = image[y1:y2, x1:x2]
             labels.append(crop)  # Crop the labels from the image

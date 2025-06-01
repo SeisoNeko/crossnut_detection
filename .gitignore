@@ -65,13 +65,11 @@ dataset/
 runs/
 output/
 pics/
+tmp/
 temp/
 check.py
 test.py
 *.zip
 num_detection.py
-
 PCA.py
-output.py
-main.py
-find_cross.py
+log.txt
