@@ -11,27 +11,31 @@ from utils.find_cross_point import find_cross_point
 from utils.find_label import find_label
 from utils.find_anchor import find_label_anchor, find_number_anchor
 from utils.image_draw_text import draw_text
+from utils.upscale import upscale_image
 from tkinter import filedialog
 
 if __name__ == '__main__':
-    with open('log.txt', 'w') as log:
+    with open('log.txt', 'w', encoding="UTF-8") as log:
         sys.stdout = log
 
         cross_model = ultralytics.YOLO('model/cross_best_yolo11n-seg.pt')
         label_model = ultralytics.YOLO('model/find_label_best.pt')
         number_model = ultralytics.YOLO('model/number_detection_best.pt')
 
-        input_dir = ''    
+        input_dir = ''
         # 使用拖曳的方式取得圖片資料夾
-        if len(sys.argv) > 1 and os.path.isdir(sys.argv[1]):
+        if len(sys.argv) >= 3 and os.path.isdir(sys.argv[2]):
             # 如果是資料夾路徑
-            if sys.argv[1].endswith('/'):
-                input_dir = sys.argv[1][:-1]
+            if sys.argv[2].endswith('/'):
+                input_dir = sys.argv[2][:-1]
             else:
-                input_dir = sys.argv[1]
+                input_dir = sys.argv[2]
         else:
-            # input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
-            input_dir = './pics/colored_1'
+            input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
+            if not input_dir:
+                print("沒有選擇資料夾，程式結束。")
+                sys.exit(0)
+            # input_dir = './pics/colored_1'
         
         print("選擇的資料夾是：", input_dir)
         output_dir = os.path.join('./output', input_dir.split('/')[-1]) # output image directory
@@ -84,13 +88,16 @@ if __name__ == '__main__':
                 anchors = []
                 if label_count > 0:
                     labels_dir = os.path.join(temp_dir, 'labels', image_name)
-                    anchors, warning = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir)
-                    
+                    anchors, warning = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir, device=sys.argv[1])
+
                 if len(anchors) <= 2: # can't use interpolation (插值)
                     warning = True
+                    # cross_path = os.path.join(temp_dir, 'crops', f"{image_name}_cross.png")
+                    # upscale_image(cross_path, f"{temp_dir}/upscaled") # 放大圖片
+                    # cross_img = cv2.imread(f"{temp_dir}/upscaled/{image_name}_cross.png")
                     number_anchor = find_number_anchor(cross_img, temp_dir, image_name, number_model)
                     anchors.extend(number_anchor)
-                
+
                 if len(anchors) <= 2: # still can't use interpolation
                     print(f"找不到足夠的錨點來計算高度: {len(anchors)}")
                     result[image_name] = "not-enouth-anchors"
@@ -119,8 +126,8 @@ if __name__ == '__main__':
                 estimated_height = height_estimator(cross_y)
                 if warning:
                     print(f"估計高度(警告): {estimated_height:.1f}cm")
-                    result[image_name] = f"*{estimated_height:.1f}cm"
-                    texted_img = draw_text(img, f"*{estimated_height:.1f}cm", text_color=(0, 0, 255))
+                    result[image_name] = f"*{estimated_height:.1f}cm*"
+                    texted_img = draw_text(img, f"*{estimated_height:.1f}cm*", text_color=(0, 0, 255))
                     cv2.imwrite(f"{warning_dir}/{image_name}.png", texted_img)
                 else:
                     print(f"估計高度: {estimated_height:.1f}cm")

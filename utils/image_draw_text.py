@@ -2,8 +2,6 @@ import cv2
 from cv2.typing import MatLike
 import math
 
-import cv2
-
 ### ref: https://stackoverflow.com/questions/60674501/how-to-make-black-background-in-cv2-puttext-with-python-opencv
 def draw_text(img, text,
           pos=(0, 0),

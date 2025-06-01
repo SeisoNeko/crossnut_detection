@@ -1,22 +1,16 @@
 import cv2
 import time
+import os
 from cv2.typing import MatLike
 from PIL import Image
 from matplotlib import pyplot as plt
 from pathlib import Path
 
 import numpy as np
-try:
-    import cupy as cp
-    if not cp.cuda.is_available():
-        cp = np
-except:
-    pass
-
-
-
+cp = None
 yellow_lower = np.array([20, 80, 50], np.uint8)
 yellow_upper = np.array([35, 255, 255], np.uint8)
+
 
 # Do iterations to find the centroids of the clusters
 def color_Iteration(init_centroids, k, Y):
@@ -63,8 +57,10 @@ def error_iteration(centroids, k, N, Y, batch_size=10000, epsilon=0.5):
     return centroids, cluster_assignments
 
 
-def kmeans_gpu(img: MatLike) -> MatLike:
-    # Load the image with transparency (RGBA)
+def kmeans_gpu(img: MatLike, device: str) -> MatLike:
+    global cp
+    if device == "cuda": import cupy as cp
+    else: cp = np
     
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     yellow_mask = cv2.inRange(hsv, yellow_lower, yellow_upper)

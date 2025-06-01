@@ -43,12 +43,12 @@ def check_transparent(image: MatLike, x1: int, y1: int, x2: int, y2: int, tolera
     return transparent_pixels <= max_transparent_pixels
 
 
-def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str) -> tuple[list[tuple[int, int]], bool]:
+def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str, device: str) -> tuple[list[tuple[int, int]], bool]:
     labels_height = []
     warning = False
 
     # K-means clustering
-    mean_labels = list(map(kmeans_gpu, labels))
+    mean_labels = list(map(kmeans_gpu, labels, [device for _ in labels]))
     for i, img in enumerate(mean_labels):
         cv2.imwrite(f"{labels_dir}/label_{i}_kmeans.png", img)
 

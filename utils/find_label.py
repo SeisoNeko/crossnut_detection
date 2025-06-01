@@ -3,10 +3,10 @@ import cv2
 import numpy as np
 from cv2.typing import MatLike
 from ultralytics import YOLO
-if __name__ == "__main__":
-    from hill_kmeans import hill_kmeans
-else:
-    from .hill_kmeans import hill_kmeans
+# if __name__ == "__main__":
+#     from hill_kmeans import hill_kmeans
+# else:
+#     from .hill_kmeans import hill_kmeans
 
 
 def find_label(image: MatLike, img_name: str, output_dir: str, model: YOLO) -> tuple[int, np.ndarray, np.ndarray, list[MatLike]]:
