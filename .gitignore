@@ -66,10 +66,12 @@ runs/
 output/
 pics/
 temp/
+tmp/
 check.py
 test.py
 *.zip
 num_detection.py
+log.txt
 
 PCA.py
 output.py
