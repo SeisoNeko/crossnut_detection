@@ -150,37 +150,20 @@ if __name__ == '__main__':
         print(f"Inference time: {inference_time:.2f} seconds")
         
         ### Save results to a csv file
-        result_file = os.path.join(output_dir, 'results.csv')
-        with open(result_file, 'w',encoding='utf-8-sig') as f:
-            f.write("Image, Result\n")
-            for img_name, res in result.items():
-                f.write(f"{img_name}, {res}\n")
-        ### Save results to a csv file
-        result_file = os.path.join(output_dir, 'results.csv')
 
         success_count = 0
         warning_count = 0
         failed_count = 0
 
-        def get_status(val):
-            if isinstance(val, str):
-                if val.startswith("*") and val.endswith("*"):
-                    return 'warning'
-                elif val == 'error' or val == 'not-enouth-anchors' or val == 'no-cross' or val == 'no-cross-point':
-                    return 'failed'
-                else:
-                    return 'success'
-            else:
-                return 'failed'
-
+        result_file = os.path.join(output_dir, 'results.csv')
         with open(result_file, 'w') as f:
             f.write("Image, Result\n")
             for img_name, res in result.items():
                 f.write(f"{img_name}, {res}\n")
-                status = get_status(res)
-                if status == 'success':
+
+                if res.endswith("cm"):
                     success_count += 1
-                elif status == 'warning':
+                elif res.startswith("*") and res.endswith("*"):
                     warning_count += 1
                 else:
                     failed_count += 1
