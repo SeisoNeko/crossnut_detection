@@ -84,19 +84,22 @@ if __name__ == '__main__':
                 temp = find_label(cross_img, img_name=image_name, output_dir=temp_dir, model=label_model)
                 label_count, label_centers, label_confs, label_imgs = temp
                 
-                
                 anchors = []
                 if label_count > 0:
                     labels_dir = os.path.join(temp_dir, 'labels', image_name)
-                    anchors, warning = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir, device=sys.argv[1])
+                    # anchors, warning = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir, device=sys.argv[1])
+                    anchors = find_label_anchor(label_imgs, label_centers, label_confs, labels_dir=labels_dir, device=sys.argv[1])
+                    print(f"找到 {len(anchors)} 個標籤")
 
                 if len(anchors) <= 2: # can't use interpolation (插值)
+                    print(f"標籤數量無法計算高度: {len(anchors)}")
                     warning = True
                     # cross_path = os.path.join(temp_dir, 'crops', f"{image_name}_cross.png")
                     # upscale_image(cross_path, f"{temp_dir}/upscaled") # 放大圖片
                     # cross_img = cv2.imread(f"{temp_dir}/upscaled/{image_name}_cross.png")
                     number_anchor = find_number_anchor(cross_img, temp_dir, image_name, number_model)
                     anchors.extend(number_anchor)
+                    print(f"找到 {len(number_anchor)} 個數字錨點")
 
                 if len(anchors) <= 2: # still can't use interpolation
                     print(f"找不到足夠的錨點來計算高度: {len(anchors)}")

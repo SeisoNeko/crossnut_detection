@@ -43,9 +43,9 @@ def check_transparent(image: MatLike, x1: int, y1: int, x2: int, y2: int, tolera
     return transparent_pixels <= max_transparent_pixels
 
 
-def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str, device: str) -> tuple[list[tuple[int, int]], bool]:
+def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.ndarray, labels_dir: str, device: str) -> list[tuple[int, int]]:#tuple[list[tuple[int, int]], bool]
     labels_height = []
-    warning = False
+    # warning = False
 
     # K-means clustering
     mean_labels = list(map(kmeans_gpu, labels, [device for _ in labels]))
@@ -108,7 +108,7 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
 
     # remove duplicate blacks
     if labels_height.count("black") > 1:
-        warning = True
+        # warning = True
         indexs = [i for i, color in enumerate(labels_height) if color == "black"]
         max_index = max(indexs, key=lambda x: confs[x])
         for i in indexs:
@@ -118,7 +118,7 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
                 positions = np.delete(positions, i, axis=0)
                 
     if labels_height.count("white") > 1:
-        warning = True
+        # warning = True
         indexs = [i for i, color in enumerate(labels_height) if color == "white"]
         max_index = max(indexs, key=lambda x: confs[x])
         for i in indexs:
@@ -133,15 +133,15 @@ def find_label_anchor(labels: list[MatLike], positions: np.ndarray, confs: np.nd
     tmp = []
     for i, (height, y) in enumerate(anchors):
         if height == BLACK_HEIGHT and i != 0:
-            warning = True
+            # warning = True
             continue
         if height == WHITE_HEIGHT and i != len(anchors) - 1:
-            warning = True
+            # warning = True
             continue
         else:
             tmp.append((y, height))
 
-    return tmp, warning
+    return tmp#, warning
 
 
 def find_number_anchor(img: MatLike, output_dir: str, img_name: str, model: YOLO) -> list[tuple[int, int]]:
