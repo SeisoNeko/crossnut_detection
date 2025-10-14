@@ -40,7 +40,7 @@ python yolo_train.py
 
 ### 執行預測
 ```bash
-python main.py
+start.bat
 ```
 
 ### 標註格式轉換

@@ -16,26 +16,27 @@ from tkinter import filedialog
 
 if __name__ == '__main__':
     with open('log.txt', 'w', encoding="UTF-8") as log:
-        sys.stdout = log
+        # sys.stdout = log
 
         cross_model = ultralytics.YOLO('model/cross_best_yolo11n-seg.pt')
         label_model = ultralytics.YOLO('model/find_label_best.pt')
         number_model = ultralytics.YOLO('model/number_detection_best.pt')
 
-        input_dir = ''
-        # 使用拖曳的方式取得圖片資料夾
-        if len(sys.argv) >= 3 and os.path.isdir(sys.argv[2]):
-            # 如果是資料夾路徑
-            if sys.argv[2].endswith('/'):
-                input_dir = sys.argv[2][:-1]
-            else:
-                input_dir = sys.argv[2]
-        else:
-            input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
-            if not input_dir:
-                print("沒有選擇資料夾，程式結束。")
-                sys.exit(0)
-            # input_dir = './pics/colored_1'
+        # input_dir = ''
+        # # 使用拖曳的方式取得圖片資料夾
+        # if len(sys.argv) >= 3 and os.path.isdir(sys.argv[2]):
+        #     # 如果是資料夾路徑
+        #     if sys.argv[2].endswith('/'):
+        #         input_dir = sys.argv[2][:-1]
+        #     else:
+        #         input_dir = sys.argv[2]
+        # else:
+
+        input_dir = filedialog.askdirectory(title="請選擇圖片資料夾")
+        if not input_dir:
+            print("沒有選擇資料夾，程式結束。")
+            sys.exit(0)
+        # input_dir = './pics/colored_1'
         
         print("選擇的資料夾是：", input_dir)
         output_dir = os.path.join('./output', input_dir.split('/')[-1]) # output image directory
